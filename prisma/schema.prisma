@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id              String     @id @default(cuid())
+  name            String?
+  email           String?    @unique
+  emailVerified   DateTime?
+  dob             DateTime?
+  country         String?
+  street_address  String?
+  city            String?
+  state           String?
+  zip_code        String?
+  image           String?
+  license_country String?
+  license_state   String?
+  company_name    String?
+  signature       String?
+  accounts        Account[]
+  sessions        Session[]
+  subscriptions   Customer[]
+  PdfFiles        PdfFile[]
+  Chat            Chat[]
+  UserChat        UserChat[]
+  teams           String[]
+}
+
+model Customer {
+  id                   String       @id @default(cuid())
+  userId               String
+  stripe_customer_id   String
+  billingPlan          BillingPlan?
+  generated_pdfs_count Int          @default(0)
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum BillingPlan {
+  basic
+  lawyer
+  business
+}
+
+model Chat {
+  id        String    @id @default(cuid())
+  title     String
+  userId    String
+  chatType  ChatType // New field to differentiate chat types
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[] @relation("ChatMessages")
+}
+
+enum ChatType {
+  associate
+  researcher
+  main
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  role      String
+  content   Json
+  createdAt DateTime @default(now())
+  chat      Chat     @relation("ChatMessages", fields: [chatId], references: [id], onDelete: Cascade) // Correct relation definition
+}

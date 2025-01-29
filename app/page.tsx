@@ -1,8 +1,16 @@
 "use client";
 
 import { useChat } from "ai/react";
-import { useEffect } from "react";
-
+import React, {
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  Fragment,
+} from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,6 +33,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
+import { usePrivy } from "@privy-io/react-auth";
 
 // Generate mock historical data
 const generateMockData = () => {
@@ -60,6 +69,8 @@ const mockMessages = [
 ];
 
 export default function Home() {
+  const { login, authenticated, logout, ready } = usePrivy();
+
   const {
     isLoading,
     input,
@@ -77,18 +88,25 @@ export default function Home() {
       group: "crypto",
     },
     onFinish: async (message, { finishReason }) => {
+      const lastSubmittedQueryRef = input;
+
       console.log("[finish reason]:", finishReason);
       if (
         (message.content && finishReason === "stop") ||
         finishReason === "length"
       ) {
-        // const newHistory = [
-        //   ...messages,
-        //   { role: "user", content: lastSubmittedQueryRef.current },
-        //   { role: "assistant", content: message.content },
-        // ];
+        const newHistory = [
+          ...messages,
+          { role: "user", content: input },
+          { role: "assistant", content: message.content },
+        ];
         // const { questions } = await suggestQuestions(newHistory);
         // setSuggestedQuestions(questions);
+
+        if (newHistory.length > 5 && !authenticated) {
+          // Show the popup or toast notification
+          login();
+        }
       }
     },
     onError: (error) => {
