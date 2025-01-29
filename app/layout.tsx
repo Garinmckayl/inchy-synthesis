@@ -24,6 +24,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <script
+          defer
+          src="https://cloud.umami.is/script.js"
+          data-website-id="91f6e793-fab3-47e3-a95f-0c30f7548207"
+        ></script>
+      </head>
       <body
       // className={spaceGrotesk.className}
       >
