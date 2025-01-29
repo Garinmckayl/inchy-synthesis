@@ -24,8 +24,8 @@ export function AppSidebar({ onSubscribe }: SidebarProps) {
         <div className="mb-4 flex flex-col justify-center p-4 h-full mt-40">
           <h2 className="mb-2 text-lg font-semibold">Inchy Token</h2>
           <div className="rounded-lg bg-gradient-to-r from-orange-500 to-pink-500 p-4 text-white">
-            <div className="text-2xl font-bold">$0.00123</div>
-            <div className="text-sm">+15.7% (24h)</div>
+            <div className="text-2xl font-bold">Coming soon</div>
+            <div className="text-sm">...</div>
           </div>
         </div>
       </SidebarHeader>

@@ -1,31 +1,45 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import CoinpaprikaAPI from "@coinpaprika/api-nodejs-client";
 
-const mockPrices = [
-  { symbol: "BTC", price: "41,234.56", change: "+2.45%" },
-  { symbol: "ETH", price: "2,345.67", change: "+1.23%" },
-  { symbol: "INCHY", price: "0.00123", change: "+15.7%" },
-  { symbol: "SOL", price: "98.76", change: "+4.56%" },
-  { symbol: "DOT", price: "6.789", change: "-0.89%" },
-]
+const client = new CoinpaprikaAPI();
+
+// Example: Retrieve token prices for popular tokens
+async function fetchTokenPrices() {
+  const tickers = await client.getAllTickers();
+
+  if (tickers.error) throw new Error(tickers.error);
+
+  return tickers.map((ticker) => ({
+    symbol: ticker.symbol,
+    price: ticker.quotes?.USD?.price?.toFixed(2) || "0.00", // Assuming you want the price in USD
+    change: ticker.quotes?.USD?.percent_change_24h
+      ? `${ticker.quotes.USD.percent_change_24h.toFixed(2)}%`
+      : "+0.00%", // Change in the last 24 hours
+  }));
+}
 
 export function PriceMarquee() {
-  const [prices, setPrices] = useState(mockPrices)
+  const [prices, setPrices] = useState([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPrices(
-        prices.map((p) => ({
-          ...p,
-          price: (Number.parseFloat(p.price.replace(",", "")) * (1 + (Math.random() - 0.5) * 0.001)).toFixed(2),
-          change: `${Math.random() > 0.5 ? "+" : "-"}${(Math.random() * 5).toFixed(2)}%`,
-        })),
-      )
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [prices])
+    const fetchPrices = async () => {
+      try {
+        const fetchedPrices = await fetchTokenPrices();
+        setPrices(fetchedPrices);
+      } catch (error) {
+        console.error("Error fetching token prices:", error);
+      }
+    };
+
+    fetchPrices();
+
+    const interval = setInterval(fetchPrices, 30000); // Update prices every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="w-full overflow-hidden border-b bg-black/50 backdrop-blur-xl">
@@ -42,11 +56,16 @@ export function PriceMarquee() {
           <div key={i} className="flex items-center space-x-2">
             <span className="text-foreground/80">{coin.symbol}</span>
             <span className="font-mono">${coin.price}</span>
-            <span className={coin.change.startsWith("+") ? "text-green-400" : "text-red-400"}>{coin.change}</span>
+            <span
+              className={
+                coin.change.startsWith("+") ? "text-green-400" : "text-red-400"
+              }
+            >
+              {coin.change}
+            </span>
           </div>
         ))}
       </motion.div>
     </div>
-  )
+  );
 }
-

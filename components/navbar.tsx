@@ -12,7 +12,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-black/50 backdrop-blur-xl">
       <div className="container flex h-14 items-center">
         <Link href="/" className="flex items-center space-x-2">
-          <span className="text-xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+          <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent ml-28">
             Inchy.ai
           </span>
         </Link>
