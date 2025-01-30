@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import prisma from "@lib/prisma";
 
-const stripe = new Stripe(process.env.STRIPE_TEST_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16",
 });
 
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: process.env.STRIPE_TEST_PRICE_ID,
+          price: process.env.STRIPE_PRICE_ID,
           quantity: 1,
         },
       ],

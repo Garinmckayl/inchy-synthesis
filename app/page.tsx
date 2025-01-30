@@ -553,7 +553,7 @@ export default function Home() {
       const { sessionId } = await response.json();
 
       const stripe = await loadStripe(
-        process.env.NEXT_PUBLIC_STRIPE_TEST_PUBLISHABLE_KEY!
+        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
       );
       await stripe?.redirectToCheckout({ sessionId });
     } catch (error) {
