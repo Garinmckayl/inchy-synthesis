@@ -18,35 +18,27 @@ import type {
   ToolInvocation,
 } from "ai";
 
-export type SearchGroupId = "associate" | "researcher" | "chat" | "legalese";
+export type SearchGroupId = "chat" | "analayser" | "trade";
 
 export const searchGroups = [
   {
-    id: "associate" as const,
-    name: "Associate",
-    description: "Assist with legal documentation and queries",
-    icon: Code,
-  },
-
-  {
-    id: "researcher" as const,
-    name: "Researcher",
-    description: "Research anything legal",
-    icon: Code,
-  },
-
-  {
     id: "chat" as const,
     name: "Chat",
-    description: "Engage in legal discussions",
+    description: "Engage in crypto discussions",
     icon: Globe,
   },
 
   {
-    id: "legalese" as const,
-    name: "Legalese",
-    description: "Simplify complex legal documents",
+    id: "trade" as const,
+    name: "Trade",
+    description: "Trade with AI",
     icon: Book,
+  },
+  {
+    id: "Analyse" as const,
+    name: "analyser",
+    description: "Dig in to wallet",
+    icon: Code,
   },
 ] as const;
 

@@ -35,10 +35,6 @@ export function PriceMarquee() {
     };
 
     fetchPrices();
-
-    const interval = setInterval(fetchPrices, 30000); // Update prices every 30 seconds
-
-    return () => clearInterval(interval);
   }, []);
 
   return (

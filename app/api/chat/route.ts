@@ -6,6 +6,7 @@
 import { getGroupConfig } from "../../actions";
 import { openai } from "@ai-sdk/openai";
 // import { auth } from "../../(auth)/auth";
+import CodeInterpreter from "@e2b/code-interpreter";
 
 import { tavily } from "@tavily/core";
 import {
@@ -81,7 +82,9 @@ export async function POST(req: Request) {
           queries: z.array(
             z
               .string()
-              .describe("Array of legal related queries to look up on the web.")
+              .describe(
+                "Array of crypto related queries to look up on the web."
+              )
           ),
           maxResults: z.array(
             z
@@ -93,9 +96,9 @@ export async function POST(req: Request) {
           ),
           topics: z.array(
             z
-              .enum(["legal", "law"])
+              .enum(["general", "finance"])
               .describe("Array of topic types to search for.")
-              .default("legal")
+              .default("finance")
           ),
           searchDepth: z.array(
             z
@@ -117,7 +120,7 @@ export async function POST(req: Request) {
         }: {
           queries: string[];
           maxResults: number[];
-          topics: ("legal" | "law")[];
+          topics: ("finance" | "general")[];
           searchDepth: ("basic" | "advanced")[];
           exclude_domains?: string[];
         }) => {
@@ -134,8 +137,8 @@ export async function POST(req: Request) {
           // Execute searches in parallel
           const searchPromises = queries.map(async (query, index) => {
             const data = await tvly.search(query, {
-              topic: topics[index] || topics[0] || "legal",
-              days: topics[index] === "law" ? 7 : undefined,
+              topic: topics[index] || topics[0] || "finance",
+              days: topics[index] === "finance" ? 7 : undefined,
               maxResults: maxResults[index] || maxResults[0] || 5,
               searchDepth: searchDepth[index] || searchDepth[0] || "basic",
               includeAnswer: true,
@@ -152,7 +155,7 @@ export async function POST(req: Request) {
                 content: obj.content,
                 raw_content: obj.raw_content,
                 published_date:
-                  topics[index] === "news" ? obj.published_date : undefined,
+                  topics[index] === "finance" ? obj.published_date : undefined,
               })),
 
               images: includeImageDescriptions
@@ -211,61 +214,130 @@ export async function POST(req: Request) {
           };
         },
       }),
-
-      legal_search: tool({
-        description: "Search local laws and regulations.",
+      stock_chart: tool({
+        description:
+          "Write and execute Python code to find stock data and generate a stock chart.",
         parameters: z.object({
-          query: z.string().describe("The search query"),
+          title: z.string().describe("The title of the chart."),
+          code: z.string().describe("The Python code to execute."),
+          icon: z
+            .enum(["stock", "date", "calculation", "default"])
+            .describe("The icon to display for the chart."),
         }),
-        execute: async ({ query }: { query: string }) => {
-          try {
-            const exa = new Exa(process.env.EXA_API_KEY as string);
+        execute: async ({
+          code,
+          title,
+          icon,
+        }: {
+          code: string;
+          title: string;
+          icon: string;
+        }) => {
+          console.log("Code:", code);
+          console.log("Title:", title);
+          console.log("Icon:", icon);
 
-            // Search academic papers with content summary
-            const result = await exa.searchAndContents(query, {
-              type: "auto",
-              numResults: 5,
-              category: "legal and policy sources	",
-              summary: {
-                query: "summary of the sources",
-              },
-            });
+          const sandbox = await CodeInterpreter.create(
+            process.env.SANDBOX_TEMPLATE_ID!
+          );
+          const execution = await sandbox.runCode(code);
+          let message = "";
 
-            // Process and clean results
-            const processedResults = result.results.reduce<
-              typeof result.results
-            >((acc, paper) => {
-              // Skip if URL already exists or if no summary available
-              if (acc.some((p) => p.url === paper.url) || !paper.summary)
-                return acc;
-
-              // Clean up summary (remove "Summary:" prefix if exists)
-              const cleanSummary = paper.summary.replace(/^Summary:\s*/i, "");
-
-              // Clean up title (remove [...] suffixes)
-              const cleanTitle = paper.title?.replace(/\s\[.*?\]$/, "");
-
-              acc.push({
-                ...paper,
-                title: cleanTitle || "",
-                summary: cleanSummary,
-              });
-
-              return acc;
-            }, []);
-
-            // Take only the first 10 unique, valid results
-            const limitedResults = processedResults.slice(0, 5);
-
-            return {
-              results: limitedResults,
-            };
-          } catch (error) {
-            console.error("legal search error:", error);
-            throw error;
+          if (execution.results.length > 0) {
+            for (const result of execution.results) {
+              if (result.isMainResult) {
+                message += `${result.text}\n`;
+              } else {
+                message += `${result.text}\n`;
+              }
+            }
           }
+
+          if (
+            execution.logs.stdout.length > 0 ||
+            execution.logs.stderr.length > 0
+          ) {
+            if (execution.logs.stdout.length > 0) {
+              message += `${execution.logs.stdout.join("\n")}\n`;
+            }
+            if (execution.logs.stderr.length > 0) {
+              message += `${execution.logs.stderr.join("\n")}\n`;
+            }
+          }
+
+          if (execution.error) {
+            message += `Error: ${execution.error}\n`;
+            console.log("Error: ", execution.error);
+          }
+
+          console.log(execution.results);
+          if (execution.results[0].chart) {
+            execution.results[0].chart.elements.map((element: any) => {
+              console.log(element.points);
+            });
+          }
+
+          return {
+            message: message.trim(),
+            chart: execution.results[0].chart ?? "",
+          };
         },
       }),
+
+      // crypto_search: tool({
+      //   description: "Search local laws and regulations.",
+      //   parameters: z.object({
+      //     query: z.string().describe("The search query"),
+      //   }),
+      //   execute: async ({ query }: { query: string }) => {
+      //     try {
+      //       const exa = new Exa(process.env.EXA_API_KEY as string);
+
+      //       // Search academic papers with content summary
+      //       const result = await exa.searchAndContents(query, {
+      //         type: "auto",
+      //         numResults: 5,
+      //         category: "legal and policy sources	",
+      //         summary: {
+      //           query: "summary of the sources",
+      //         },
+      //       });
+
+      //       // Process and clean results
+      //       const processedResults = result.results.reduce<
+      //         typeof result.results
+      //       >((acc, paper) => {
+      //         // Skip if URL already exists or if no summary available
+      //         if (acc.some((p) => p.url === paper.url) || !paper.summary)
+      //           return acc;
+
+      //         // Clean up summary (remove "Summary:" prefix if exists)
+      //         const cleanSummary = paper.summary.replace(/^Summary:\s*/i, "");
+
+      //         // Clean up title (remove [...] suffixes)
+      //         const cleanTitle = paper.title?.replace(/\s\[.*?\]$/, "");
+
+      //         acc.push({
+      //           ...paper,
+      //           title: cleanTitle || "",
+      //           summary: cleanSummary,
+      //         });
+
+      //         return acc;
+      //       }, []);
+
+      //       // Take only the first 10 unique, valid results
+      //       const limitedResults = processedResults.slice(0, 5);
+
+      //       return {
+      //         results: limitedResults,
+      //       };
+      //     } catch (error) {
+      //       console.error("legal search error:", error);
+      //       throw error;
+      //     }
+      //   },
+      // }),
     },
     onFinish: async ({ response }) => {
       try {

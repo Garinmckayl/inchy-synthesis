@@ -17,7 +17,7 @@ export async function suggestQuestions(history: any[]) {
     maxTokens: 300,
     topP: 0.3,
     topK: 7,
-    system: `You are a search engine query/questions generator. You 'have' to create only '3' questions for the search engine based on the message history which has been provided to you.
+    system: `You are a search engine query/questions generator. You 'have' to create only '4' questions for the search engine based on the message history which has been provided to you.
 The questions should be open-ended and should encourage further discussion while maintaining the whole context. Limit it to 5-10 words per question.
 Always put the user input's context is some way so that the next search knows what to search for exactly.
 Try to stick to the context of the conversation and avoid asking questions that are too general or too specific.
@@ -59,15 +59,16 @@ export async function fetchMetadata(url: string) {
 }
 
 const groupTools = {
-  researcher: [
+  chat: [
     "web_search",
-    "legal_search",
+    "stock_chart",
+    "crypto_chart",
     "retrieve",
-    "nearby_search",
+    "code_interpreter",
   ] as const,
-  associate: ["academic_search", "code_interpreter"] as const,
-  chat: ["youtube_search"] as const,
-  legalese: ["code_interpreter", "stock_chart", "currency_converter"] as const,
+  // associate: ["academic_search", "code_interpreter"] as const,
+  // chat: ["youtube_search"] as const,
+  // legalese: ["code_interpreter", "stock_chart", "currency_converter"] as const,
 } as const;
 
 const groupPrompts = {
@@ -125,7 +126,7 @@ const groupPrompts = {
   // `,
   chat: `
     You are Inchy AI, a hyper-specialized crypto intelligence agent designed to analyze and interpret real-time blockchain data, market trends, DeFi protocols, NFTs, and regulatory developments.
-Non-Negotiable First Step: Always execute the crypto research tool once before responding.
+Non-Negotiable First Step:.
 
 Mission:
 

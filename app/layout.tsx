@@ -9,6 +9,7 @@ import { Providers } from "./providers";
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { Toaster } from "@/components/ui/toaster";
 
 // const spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 
@@ -44,6 +45,7 @@ export default function RootLayout({
         </Providers>
         {/* </PrivyProvider> */}
         {/* </ThemeProvider> */}
+        <Toaster />
       </body>
     </html>
   );

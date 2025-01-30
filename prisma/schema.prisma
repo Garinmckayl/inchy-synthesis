@@ -37,28 +37,28 @@ model Session {
 }
 
 model User {
-  id              String     @id @default(cuid())
-  name            String?
-  email           String?    @unique
-  emailVerified   DateTime?
-  dob             DateTime?
-  country         String?
-  street_address  String?
-  city            String?
-  state           String?
-  zip_code        String?
-  image           String?
-  license_country String?
-  license_state   String?
-  company_name    String?
-  signature       String?
-  accounts        Account[]
-  sessions        Session[]
-  subscriptions   Customer[]
-  PdfFiles        PdfFile[]
-  Chat            Chat[]
-  UserChat        UserChat[]
-  teams           String[]
+  id               String     @id @default(cuid())
+  name             String?
+  email            String?    @unique
+  emailVerified    DateTime?
+  dob              DateTime?
+  country          String?
+  street_address   String?
+  city             String?
+  state            String?
+  zip_code         String?
+  image            String?
+  license_country  String?
+  license_state    String?
+  company_name     String?
+  signature        String?
+  accounts         Account[]
+  sessions         Session[]
+  subscriptions    Customer[]
+  Chat             Chat[]
+  teams            String[]
+  stripeCustomerId String?    @unique
+  isActive         Boolean    @default(false)
 }
 
 model Customer {
