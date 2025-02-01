@@ -53,6 +53,7 @@ import {
   Heart,
   Loader2,
   LucideIcon,
+  ArrowUpIcon,
   MapPin,
   Moon,
   Pause,
@@ -89,6 +90,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { atomDark, vs } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import { toast } from "sonner";
 
+
 import {
   oneDark,
   oneLight,
@@ -103,6 +105,7 @@ import { ToolInvocation } from "ai";
 import { cn, SearchGroupId } from "@/lib/utils";
 import MultiSearch from "@/components/multi-search";
 import { GeistMono } from "geist/font/mono";
+import { Textarea } from "@/components/ui/textarea";
 
 // Generate mock historical data
 const generateMockData = () => {
@@ -475,7 +478,28 @@ const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
   );
 };
 
+const StopIcon = ({ size = 16 }: { size?: number }) => {
+  return (
+      <svg
+          height={size}
+          viewBox="0 0 16 16"
+          width={size}
+          style={{ color: "currentcolor" }}
+      >
+          <path
+              fillRule="evenodd"
+              clipRule="evenodd"
+              d="M3 3H13V13H3V3Z"
+              fill="currentColor"
+          ></path>
+      </svg>
+  );
+};
+
+
 export default function Home() {
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
   const { login, authenticated, user, logout, ready } = usePrivy();
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
 
@@ -819,18 +843,29 @@ export default function Home() {
               <div className="border-t p-4">
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="flex gap-2 fixed bottom-4 left-0 right-0 w-full max-w-[90%] sm:max-w-4xl mx-auto">
+                  <div className="relative w-full">
                     <Input
                       value={input}
                       onChange={handleInputChange}
                       placeholder="Ask about crypto markets..."
-                      className="flex  py-2 shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-[56px] max-h-[400px] w-full resize-none rounded-lg overflow-x-hidden text-base leading-relaxed bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 focus:border-neutral-300 dark:focus:border-neutral-600 text-neutral-900 dark:text-neutral-100 focus:!ring-1 focus:!ring-neutral-300 dark:focus:!ring-neutral-600 px-4 pt-3 pb-5"
+                      className="flex py-2 shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-[56px] max-h-[400px] w-full resize-none rounded-lg overflow-x-hidden text-base leading-relaxed bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 focus:border-neutral-300 dark:focus:border-neutral-600 text-neutral-900 dark:text-neutral-100 focus:!ring-1 focus:!ring-neutral-300 dark:focus:!ring-neutral-600 px-4 pt-3 pb-5"
                     />
-                    <Button type="submit" className="rounded-xl">
+                    <Button type="submit" className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-xl">
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
+
+
+                  </div>
+
+  
+
                 </form>
+
+
               </div>
+
+
             </Card>
           </div>
         </SidebarInset>

@@ -6,6 +6,8 @@ import { usePrivy } from "@privy-io/react-auth";
 import { LogOut, Wallet } from "lucide-react";
 import { useEffect } from "react";
 import FeaturesButton from "@/components/features";
+import { AccountDetailtDialog } from "./account-detail-dialog";
+
 
 export function Navbar() {
   const { login, authenticated, user, logout, ready } = usePrivy();
@@ -55,6 +57,8 @@ export function Navbar() {
         <div className="flex flex-1 items-center justify-end space-x-2">
           {ready && (
             <>
+                      {authenticated && <AccountDetailtDialog />}
+
               {authenticated ? (
                 <Button variant="ghost" onClick={logout}>
                   <LogOut className="mr-2 h-4 w-4" />

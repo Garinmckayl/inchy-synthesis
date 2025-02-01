@@ -54,7 +54,7 @@ export function PriceMarquee() {
             <span className="font-mono">${coin.price}</span>
             <span
               className={
-                coin.change.startsWith("+") ? "text-green-400" : "text-red-400"
+                coin.change.startsWith("-") ? "text-red-400 " : "text-green-400"
               }
             >
               {coin.change}
