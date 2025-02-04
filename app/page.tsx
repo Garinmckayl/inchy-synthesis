@@ -554,7 +554,7 @@ export default function Home() {
 
   const handleSuggestedQuestionClick = useCallback(
     async (question: string) => {
-      // setHasSubmitted(true);
+    setHasSubmitted(true);
       setSuggestedQuestions([]);
 
       await append({
@@ -591,6 +591,24 @@ export default function Home() {
       });
     }
   };
+
+
+  useEffect(() => {
+    if (
+      // !initializedRef.current && initialState.query && 
+      messages.length) {
+        // initializedRef.current = true;
+        setHasSubmitted(true);
+        // console.log("[initial query]:", initialState.query);
+        // append({
+        //     content: initialState.query,
+        //     role: 'user'
+        // });
+    }
+}, [
+  // initialState.query, 
+  append, setInput, messages.length]);
+
 
   const router = useRouter();
 
@@ -706,6 +724,13 @@ export default function Home() {
                       </div>
                     </div>
                   ))} */}
+                   {!hasSubmitted && (
+                        <div className="text-center !font-sans">
+                            <h1 className="text-2xl sm:text-4xl mb-6 text-neutral-800 dark:text-neutral-100 font-syne mt-20">
+                                What do you want to search <br/> about crypto today?
+                            </h1>
+                        </div>
+                    )}
 
                   {memoizedMessages.map((message, index) => (
                     <div key={index}>
