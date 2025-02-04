@@ -84,6 +84,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import InteractiveStockChart from "@/components/interactive-stock-chart";
+import InteractiveCryptoChart from "@/components/interactive-crypto-chart";
 import Marked, { ReactRenderer } from "marked-react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -106,6 +107,8 @@ import { cn, SearchGroupId } from "@/lib/utils";
 import MultiSearch from "@/components/multi-search";
 import { GeistMono } from "geist/font/mono";
 import { Textarea } from "@/components/ui/textarea";
+
+
 
 // Generate mock historical data
 const generateMockData = () => {
@@ -594,10 +597,11 @@ export default function Home() {
   const memoizedMessages = useMemo(() => messages, [messages]);
 
   return (
+
     <div className="flex min-h-screen flex-col">
-      <Navbar />
+      <Navbar onSubscribe={handleSubscribe}/>
       <SidebarProvider>
-        <AppSidebar onSubscribe={handleSubscribe} />
+        {/* <AppSidebar onSubscribe={handleSubscribe} /> */}
         <SidebarInset>
           <div className=" w-full max-w-[90%] !font-sans sm:max-w-6xl space-y-6 p-0 mx-auto transition-all duration-300">
             {/* <div className="p-4">
@@ -1168,6 +1172,43 @@ const ToolInvocationListView = memo(
               {result?.chart && (
                 <div className="w-full">
                   <InteractiveStockChart
+                    title={args.title}
+                    chart={{
+                      ...result.chart,
+                      x_scale: "datetime",
+                    }}
+                    data={result.chart.elements}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        if (toolInvocation.toolName === "crypto_chart") {
+          return (
+            <div className="flex flex-col gap-3 w-full mt-4">
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "w-fit flex items-center gap-3 px-4 py-2 rounded-full transition-colors duration-200",
+                  !result
+                    ? "bg-blue-50/50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                    : "bg-green-50/50 dark:bg-green-900/20 text-green-600 dark:text-green-400"
+                )}
+              >
+                <TrendingUpIcon className="h-4 w-4" />
+                <span className="font-medium">{args.title}</span>
+                {!result ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4" />
+                )}
+              </Badge>
+
+              {result?.chart && (
+                <div className="w-full">
+                  <InteractiveCryptoChart
                     title={args.title}
                     chart={{
                       ...result.chart,

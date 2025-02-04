@@ -4,13 +4,21 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { usePrivy } from "@privy-io/react-auth";
 import { LogOut, Wallet } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import FeaturesButton from "@/components/features";
 import { AccountDetailtDialog } from "./account-detail-dialog";
+import {SubscribeDialog} from "./subscribe-dialog";
 
 
-export function Navbar() {
+interface NavbarProps {
+  onSubscribe: () => void;
+}
+
+export function Navbar({ onSubscribe }: NavbarProps) {
+  console.log(onSubscribe)
   const { login, authenticated, user, logout, ready } = usePrivy();
+  const [isOpen, setSubscribeDialogOpen] = useState(false);
+
 
   const handleLogin = async () => {
     console.log("Attempting to log in...");
@@ -35,6 +43,10 @@ export function Navbar() {
         });
 
         const data = await response.json();
+        if (!data.isActive) {
+          setSubscribeDialogOpen(true);
+        // alert('unsubscribed user')
+        }
         console.log("API response:", data);
       };
 
@@ -72,9 +84,13 @@ export function Navbar() {
               )}
             </>
           )}
-          <Button variant="gradient">Subscribe</Button>
+          <Button  onClick={onSubscribe}>Subscribe</Button>
           <FeaturesButton />
-        </div>
+          <SubscribeDialog
+            onSubscribe={onSubscribe}
+            isOpen={isOpen}
+            onOpenChange={setSubscribeDialogOpen}
+          />        </div>
       </div>
     </header>
   );

@@ -283,6 +283,75 @@ export async function POST(req: Request) {
           };
         },
       }),
+      crypto_chart: tool({
+        description:
+          "Write and execute Python code to find crypto data and generate a crypto chart.",
+        parameters: z.object({
+          title: z.string().describe("The title of the chart."),
+          code: z.string().describe("The Python code to execute."),
+          icon: z
+            .enum(["crypto", "date", "calculation", "default"])
+            .describe("The icon to display for the chart."),
+        }),
+        execute: async ({
+          code,
+          title,
+          icon,
+        }: {
+          code: string;
+          title: string;
+          icon: string;
+        }) => {
+          console.log("Code:", code);
+          console.log("Title:", title);
+          console.log("Icon:", icon);
+
+          const sandbox = await CodeInterpreter.create(
+            process.env.SANDBOX_TEMPLATE_ID!
+          );
+          const execution = await sandbox.runCode(code);
+          let message = "";
+
+          if (execution.results.length > 0) {
+            for (const result of execution.results) {
+              if (result.isMainResult) {
+                message += `${result.text}\n`;
+              } else {
+                message += `${result.text}\n`;
+              }
+            }
+          }
+
+          if (
+            execution.logs.stdout.length > 0 ||
+            execution.logs.stderr.length > 0
+          ) {
+            if (execution.logs.stdout.length > 0) {
+              message += `${execution.logs.stdout.join("\n")}\n`;
+            }
+            if (execution.logs.stderr.length > 0) {
+              message += `${execution.logs.stderr.join("\n")}\n`;
+            }
+          }
+
+          if (execution.error) {
+            message += `Error: ${execution.error}\n`;
+            console.log("Error: ", execution.error);
+          }
+
+          console.log(execution.results);
+          if (execution.results[0].chart) {
+            execution.results[0].chart.elements.map((element: any) => {
+              console.log(element.points);
+            });
+          }
+
+          return {
+            message: message.trim(),
+            chart: execution.results[0].chart ?? "",
+          };
+        },
+      }),
 
       // crypto_search: tool({
       //   description: "Search local laws and regulations.",

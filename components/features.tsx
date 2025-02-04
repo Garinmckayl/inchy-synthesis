@@ -104,7 +104,7 @@ const FeaturesButton = () => {
           <Button
             variant="outline"
             size="icon"
-            className="rounded-full w-8 h-8 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+            className="rounded-full ml-8 w-8 h-8 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
           >
             Features{" "}
           </Button>
@@ -122,7 +122,7 @@ const FeaturesButton = () => {
         <Button
           variant="outline"
           size="icon"
-          className="rounded-full w-8 h-8 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
+          className="rounded-full ml-8  w-8 h-8 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all"
         >
           Features{" "}
         </Button>
