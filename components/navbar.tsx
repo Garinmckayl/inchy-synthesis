@@ -15,7 +15,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ onSubscribe }: NavbarProps) {
-  console.log(onSubscribe)
+  // console.log(onSubscribe)
   const { login, authenticated, user, logout, ready } = usePrivy();
   const [isOpen, setSubscribeDialogOpen] = useState(false);
 
@@ -84,7 +84,7 @@ export function Navbar({ onSubscribe }: NavbarProps) {
               )}
             </>
           )}
-          <Button  onClick={onSubscribe}>Subscribe</Button>
+          <Button className="mr-8" onClick={onSubscribe}>Subscribe</Button>
           <FeaturesButton />
           <SubscribeDialog
             onSubscribe={onSubscribe}

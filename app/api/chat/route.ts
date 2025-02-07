@@ -25,11 +25,16 @@ import {
   getMostRecentUserMessage,
   sanitizeResponseMessages,
 } from "../../../lib/utils";
-// import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { PrivyClient } from '@privy-io/server-auth';
+
+import { cookies } from 'next/headers'
 
 // const session = await auth();
 
-// const prisma = new PrismaClient();
+const prisma = new PrismaClient();
+const privy = new PrivyClient('cm5qnadbd01ejm51k0qtyolck', '3M3akoBoW5nR3wYmJfs32ht4fYCFCZHyAp2vrZ6qFrcStz5hiSPMt8nEm13LkzP4HzkiG6REsKUN5895yvy2vPK');
+
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 5;
@@ -60,9 +65,23 @@ async function isValidImageUrl(url: string): Promise<boolean> {
 }
 
 export async function POST(req: Request) {
-  const { messages, model, id } = await req.json();
+
+  const { messages, model, id, user } = await req.json();
   const group = "researcher";
   const { tools: activeTools, systemPrompt } = await getGroupConfig("chat");
+
+  const chat = await getChatById({ id });
+  
+  const userMessageId = generateUUID();
+  const coreMessages = convertToCoreMessages(messages);
+  const userMessage = getMostRecentUserMessage(coreMessages);
+
+
+  if (!chat) {
+    const title = await generateTitleFromUserMessage({ message: userMessage });
+    await saveChat({ id, userId: user, title });
+  }
+
 
   const result = streamText({
     model: openai("gpt-3.5-turbo"),
@@ -412,8 +431,28 @@ export async function POST(req: Request) {
       try {
         const responseMessagesWithoutIncompleteToolCalls =
           sanitizeResponseMessages(response.messages);
-
-        // await saveMessages({
+          await saveMessages({
+            messages: responseMessagesWithoutIncompleteToolCalls.map(
+              (message) => {
+                const messageId = generateUUID();
+  
+                // if (message.role === "assistant") {
+                //   dataStream.writeMessageAnnotation({
+                //     messageIdFromServer: messageId,
+                //   });
+                // }
+  
+                return {
+                  id: messageId,
+                  chatId: id,
+                  role: message.role,
+                  content: message.content,
+                  createdAt: new Date(),
+                };
+              }
+            ),
+          });
+       
         //   messages: responseMessagesWithoutIncompleteToolCalls.map(
         //     (message) => {
         //       const messageId = generateUUID();
@@ -439,16 +478,8 @@ export async function POST(req: Request) {
       }
     },
   });
-  const userMessageId = generateUUID();
-  const coreMessages = convertToCoreMessages(messages);
-  const userMessage = getMostRecentUserMessage(coreMessages);
 
-  // const chat = await getChatById({ id });
 
-  // if (!chat) {
-  //   const title = await generateTitleFromUserMessage({ message: userMessage });
-  //   // await saveChat({ id, userId: "cm5wlwpzc00000ny6a9frdrvw", title });
-  // }
 
   // await saveMessages({
   //   messages: [
@@ -456,65 +487,72 @@ export async function POST(req: Request) {
   //   ],
   // });
 
+  await saveMessages({
+    messages: [
+      { ...userMessage, id: userMessageId, createdAt: new Date(), chatId: id },
+    ],
+  });
+
   return result.toDataStreamResponse();
 }
 
-// export async function saveMessages({ messages }: { messages }) {
-//   try {
-//     // Use Prisma's createMany method to insert multiple messages
-//     return await prisma.message.createMany({
-//       data: messages,
-//     });
-//   } catch (error) {
-//     console.error("Failed to save messages in database", error);
-//     throw error;
-//   } finally {
-//     await prisma.$disconnect(); // Ensure the Prisma client is disconnected after the operation
-//   }
-// }
+export async function saveMessages({ messages }: { messages }) {
+  try {
+    console.log(messages)
+    // Use Prisma's createMany method to insert multiple messages
+    return await prisma.message.createMany({
+      data: messages,
+    });
+  } catch (error) {
+    console.error("Failed to save messages in database", error);
+    throw error;
+  } finally {
+    await prisma.$disconnect(); // Ensure the Prisma client is disconnected after the operation
+  }
+}
 
-// export async function getChatById({ id }: { id: string }) {
-//   try {
-//     const selectedChat = await prisma.chat.findUnique({
-//       where: {
-//         id: id, // Assuming 'id' is the primary key in the Chat model
-//       },
-//     });
-//     return selectedChat;
-//   } catch (error) {
-//     console.error("Failed to get chat by id from database", error);
-//     throw error;
-//   } finally {
-//     await prisma.$disconnect(); // Ensure the Prisma client is disconnected after the operation
-//   }
-// }
+export async function getChatById({ id }: { id: string }) {
+  try {
+    const selectedChat = await prisma.chat.findUnique({
+      where: {
+        id: id, // Assuming 'id' is the primary key in the Chat model
+      },
+    });
+    return selectedChat;
+  } catch (error) {
+    console.error("Failed to get chat by id from database", error);
+    throw error;
+  } finally {
+    await prisma.$disconnect(); // Ensure the Prisma client is disconnected after the operation
+  }
+}
 
-// export async function saveChat({
-//   id,
-//   userId,
-//   title,
-// }: {
-//   id: string;
-//   userId: string;
-//   title: string;
-// }) {
-//   try {
-//     return await prisma.chat.create({
-//       data: {
-//         id,
-//         createdAt: new Date(), // Ensure your Chat model has a createdAt field
-//         userId,
-//         title,
-//         chatType: "researcher",
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Failed to save chat in database", error);
-//     throw error;
-//   } finally {
-//     await prisma.$disconnect(); // Ensure the Prisma client is disconnected after the operation
-//   }
-// }
+export async function saveChat({
+  id,
+  userId,
+  title,
+}: {
+  id: string;
+  userId: string;
+  title: string;
+}) {
+  try {
+    return await prisma.chat.create({
+      data: {
+        id,
+        createdAt: new Date(), // Ensure your Chat model has a createdAt field
+        userId,
+        title,
+        chatType: "researcher",
+      },
+    });
+  } catch (error) {
+    console.error("Failed to save chat in database", error);
+    throw error;
+  } finally {
+    await prisma.$disconnect(); // Ensure the Prisma client is disconnected after the operation
+  }
+}
 
 export async function generateTitleFromUserMessage({
   message,

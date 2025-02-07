@@ -1,6 +1,6 @@
 "use client";
 
-import { useChat } from "ai/react";
+import { useChat, Message } from "ai/react";
 import React, {
   memo,
   Suspense,
@@ -108,7 +108,24 @@ import MultiSearch from "@/components/multi-search";
 import { GeistMono } from "geist/font/mono";
 import { Textarea } from "@/components/ui/textarea";
 
+import { getChatsByUserId } from '@/lib/db/queries';
+import { convertToUIMessages } from '@/lib/utils';
 
+
+
+
+
+// async function verifyToken() {
+//   const url = "/api/verify";
+//   const accessToken = await getAccessToken();
+//   const result = await fetch(url, {
+//     headers: {
+//       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined),
+//     },
+//   });
+
+//   return await result.json();
+// }
 
 // Generate mock historical data
 const generateMockData = () => {
@@ -500,10 +517,55 @@ const StopIcon = ({ size = 16 }: { size?: number }) => {
 };
 
 
-export default function Home() {
+export default function Home( {
+  // id,
+  // initialMessages,
+}: {
+  // id: string;
+  // initialMessages: Array<Message>;
+
+}) {
+
+  const [initialMessages, setInitialMessages] = useState([]);
+
+
+  console.log(initialMessages, 'initial messages')
+
+
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const { login, authenticated, user, logout, ready } = usePrivy();
+
+  
+
+  const [chatID, setChatID] = useState(null);
+
+
+  useEffect(() => {
+    const fetchChats = async () => {
+      const response = await fetch(`/api/history?id=${user?.id}`, {
+        method: 'GET',
+
+      });
+      const chat = await response.json();
+      console.log(chat.id, 'chat id')
+      setChatID(chat.id);
+
+      setInitialMessages(convertToUIMessages(chat.messages));
+     
+    };
+  
+    fetchChats();
+
+    const interval = setInterval(fetchChats, 5000); // Fetch every 5 seconds
+  
+    return () => clearInterval(interval); // Cleanup interval on component unmount
+  }, [user]); 
+
+  const id = chatID; // Safely access chat.id
+
+
+
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
 
   const {
@@ -518,9 +580,13 @@ export default function Home() {
     reload,
     stop,
   } = useChat({
+    id,
     maxSteps: 8,
+    initialMessages,
     body: {
+      id,
       group: "crypto",
+      user: user?.id,
     },
     onFinish: async (message, { finishReason }) => {
       const lastSubmittedQueryRef = input;
@@ -814,7 +880,8 @@ export default function Home() {
                       )}
                       {message.role === "assistant" &&
                         message.content !== null &&
-                        !message.toolInvocations && (
+                        // !message.toolInvocations && 
+                        (
                           <div>
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
@@ -879,9 +946,31 @@ export default function Home() {
                       placeholder="Ask about crypto markets..."
                       className="flex py-2 shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-[56px] max-h-[400px] w-full resize-none rounded-lg overflow-x-hidden text-base leading-relaxed bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 focus:border-neutral-300 dark:focus:border-neutral-600 text-neutral-900 dark:text-neutral-100 focus:!ring-1 focus:!ring-neutral-300 dark:focus:!ring-neutral-600 px-4 pt-3 pb-5"
                     />
-                    <Button type="submit" className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-xl">
+
+                    
+{isLoading ? (
+                            <Button
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-xl"                                   // onClick={(event) => {
+                                //     event.preventDefault();
+                                //     stop();
+                                // }}
+                                variant="destructive"
+                                disabled={!isLoading}
+                            >
+                                <StopIcon size={14} />
+                            </Button>
+                        ) : (
+                            <Button
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-xl"                                type="submit"
+                                // disabled={input.length === 0}
+                            >
                       <Send className="h-4 w-4" />
-                    </Button>
+                      </Button>
+                        )}
+
+                    {/* <Button type="submit" className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-xl">
+                      <Send className="h-4 w-4" />
+                    </Button> */}
                   </div>
 
 

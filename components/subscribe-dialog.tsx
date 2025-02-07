@@ -24,7 +24,7 @@ interface SubscribeProps {
   }
   
 export function SubscribeDialog({ onSubscribe, isOpen, onOpenChange }: SubscribeProps) {
-  console.log(onSubscribe)
+  // console.log(onSubscribe)
   // const [isSOpen, setIsOpen] = useState(isOpen);
   const { authenticated, login, logout, user } = usePrivy();
   const [userDetails, setUserDetails] = useState<PrivyUser | null>(null);
