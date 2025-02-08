@@ -6,7 +6,7 @@ import { Share, LayoutGrid, List, ChevronDown } from "lucide-react"
 
 export function ActivityFeed() {
   return (
-    <Card className="bg-gray-900/50 border-gray-800 text-white">
+    <Card className="bg-[#181c1f] border-gray-800 text-white p-4 border rounded-lg" >
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
         <CardTitle className="text-base font-medium">Activity</CardTitle>
         <div className="flex items-center gap-2">

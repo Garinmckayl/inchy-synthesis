@@ -11,7 +11,7 @@ import { Navbar } from "@/components/navbar";
 
 export default function Page() {
   return (
-    <><Navbar /><div className="min-h-screen bg-[#1a1b1e] text-white">
+    <><Navbar /><div className="min-h-screen bg-[#0c1013] text-white">
           {/* <header className="border-b border-gray-800 px-4 py-2">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">

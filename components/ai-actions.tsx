@@ -1,8 +1,9 @@
 "use client"
 
-import { Bot, ArrowRight } from "lucide-react"
+import { Bot, ArrowRight, Settings2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Link from "next/link"
 
 const suggestions = [
   {
@@ -21,11 +22,15 @@ const suggestions = [
 
 export function AiActions() {
   return (
-    <Card className="bg-gray-900/50 border-gray-800 text-white">
+    <Card className="bg-[#181c1f] border-gray-800 text-white">
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-purple-400" />
           <CardTitle className="text-base font-medium">AI Actions</CardTitle>
+          <Link href="/dashboard/ai-settings">
+
+          <Settings2 className="h-4 w-4 text-purple-400"/>
+          </Link>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">

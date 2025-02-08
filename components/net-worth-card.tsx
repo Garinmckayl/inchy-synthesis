@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 
 export default function NetWorthCard() {
   return (
-    <Card className="bg-gray-900 border-gray-800">
+    <Card className="bg-[#181c1f] border-gray-800">
       <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Net Worth</CardTitle>
         <Button variant="ghost" size="icon">
