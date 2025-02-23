@@ -70,6 +70,7 @@ export async function POST(req: Request) {
   const group = "researcher";
   const { tools: activeTools, systemPrompt } = await getGroupConfig("chat");
 
+  console.log(messages, model, id, user);
   const chat = await getChatById({ id });
   
   const userMessageId = generateUUID();
@@ -512,6 +513,10 @@ export async function saveMessages({ messages }: { messages }) {
 }
 
 export async function getChatById({ id }: { id: string }) {
+  if (!id) {
+    console.log("No ID provided for getChatById");
+    return null; // Early return if no id is provided
+  }
   try {
     const selectedChat = await prisma.chat.findUnique({
       where: {

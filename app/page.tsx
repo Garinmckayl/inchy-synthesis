@@ -111,6 +111,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getChatsByUserId } from '@/lib/db/queries';
 import { convertToUIMessages } from '@/lib/utils';
 
+import { generateUUID } from '@/lib/utils';
 
 
 
@@ -526,6 +527,12 @@ export default function Home( {
 
 }) {
 
+  const [chatID, setChatID] = useState();
+
+  const id = chatID || generateUUID();
+  console.log(id);
+
+
   const [initialMessages, setInitialMessages] = useState([]);
 
 
@@ -538,18 +545,23 @@ export default function Home( {
 
   
 
-  const [chatID, setChatID] = useState(null);
 
 
   useEffect(() => {
+    console.log(id, user)
     const fetchChats = async () => {
       const response = await fetch(`/api/history?id=${user?.id}`, {
         method: 'GET',
 
       });
       const chat = await response.json();
-      console.log(chat.id, 'chat id')
-      setChatID(chat.id);
+      if (chat) {
+        console.log(chat.id, 'chat id')
+        // const id = chat.id;
+        setChatID(chat.id);
+      }
+
+      console.log(chatID);
 
       setInitialMessages(convertToUIMessages(chat.messages));
      
@@ -557,12 +569,14 @@ export default function Home( {
   
     fetchChats();
 
-    const interval = setInterval(fetchChats, 5000); // Fetch every 5 seconds
+    const interval = setInterval(fetchChats, 10000); // Fetch every 5 seconds
   
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, [user]); 
 
-  const id = chatID; // Safely access chat.id
+
+
+
 
 
 

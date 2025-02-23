@@ -1,3 +1,5 @@
+"use client"
+
 import { Bell, Search, User, Eye, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,11 +9,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AiActions } from "@/components/ai-actions"
 import NetWorthCard from "@/components/net-worth-card"
 import { Navbar } from "@/components/navbar";
-
+import WalletData from "@/components/showcaseWalletData";
 
 export default function Page() {
   return (
     <><Navbar /><div className="min-h-screen bg-[#0c1013] text-white">
+ 
           {/* <header className="border-b border-gray-800 px-4 py-2">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
@@ -80,51 +83,14 @@ export default function Page() {
                   </div>
               </div>
 
-              <div className="mb-8 overflow-x-auto">
-                  <Tabs defaultValue="overview">
-                      <TabsList className="border-b border-gray-800 w-full justify-start rounded-none bg-transparent">
-                          <TabsTrigger
-                              value="overview"
-                              className="text-purple-400 data-[state=active]:border-b-2 data-[state=active]:border-purple-400"
-                          >
-                              Overview
-                          </TabsTrigger>
-                          <TabsTrigger value="tokens">Tokens</TabsTrigger>
-                          <TabsTrigger value="defi">DeFi</TabsTrigger>
-                          <TabsTrigger value="nfts">NFTs</TabsTrigger>
-                          <TabsTrigger value="activity">Activity</TabsTrigger>
-                      </TabsList>
-                  </Tabs>
-              </div>
-
-              <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-8">
-                  <div className="space-y-8">
-                      <div className="flex flex-wrap items-center gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 rounded-full bg-purple-600" />
-                              <span>$36.13</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 rounded-full bg-pink-600" />
-                              <span>$12.68</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 rounded-full bg-blue-600" />
-                              <span>$9.44</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                              <div className="h-6 w-6 rounded-full bg-gray-600" />
-                              <span>$1.19</span>
-                          </div>
-                      </div>
-                      <TokenList />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-1 xl:grid-cols-[1fr_400px] gap-4">
+              <WalletData/>
                   <div className="space-y-6">
-                      <NetWorthCard />
                       <AiActions />
-                      <ActivityFeed />
                   </div>
+                  
               </div>
+             
           </main>
       </div></>
   )

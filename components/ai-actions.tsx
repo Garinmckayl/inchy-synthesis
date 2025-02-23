@@ -22,16 +22,19 @@ const suggestions = [
 
 export function AiActions() {
   return (
-    <Card className="bg-[#181c1f] border-gray-800 text-white">
+    <Card className="bg-[#181c1f] border-gray-800 text-white w-[90%] mt-[60px] rounded-xl">
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-purple-400" />
+          <Bot className="h-4 w-4 text-zinc-200" />
           <CardTitle className="text-base font-medium">AI Actions</CardTitle>
-          <Link href="/dashboard/ai-settings">
 
-          <Settings2 className="h-4 w-4 text-purple-400"/>
-          </Link>
         </div>
+        <Link href="/dashboard/ai-settings" className="text-sm flex">
+         <div>AI Setting </div> 
+           <Settings2 className="h-4 w-4 text-zinc-200"/>
+          
+          </Link>
+         
       </CardHeader>
       <CardContent className="space-y-3">
         {suggestions.map((suggestion, index) => (
@@ -41,7 +44,7 @@ export function AiActions() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="shrink-0 text-purple-400 hover:text-purple-300 hover:bg-purple-400/10"
+                className="shrink-0 text-zinc-200 hover:text-purple-300 hover:bg-zink-400/10"
               >
                 {suggestion.action}
                 <ArrowRight className="ml-2 h-4 w-4" />
