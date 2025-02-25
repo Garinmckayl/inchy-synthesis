@@ -45,7 +45,7 @@ const BestPerformingTable = ({ tokens }) => {
         <select
           value={selectedFilter}
           onChange={handleFilterChange}
-          className={BestPerformingTableStyle.selectClass}>
+          className={BestPerformingTableStyle.selectClass} >
           <option value="PNL_24h">24h PNL</option>
           <option value="PNL_week">7d PNL</option>
           <option value="PNL_month">30d PNL</option>
