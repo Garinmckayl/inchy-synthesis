@@ -41,7 +41,7 @@ function WalletData() {
         const fetchData = async () => {
             try {
                 const url = getUrlString("Ethereum", 'getAddressInfo', "0xA69babEF1cA67A37Ffaf7a485DfFF3382056e78C");
-                alert(url)
+                // alert(url)
                 const response = await fetch(url);
                
 
@@ -93,15 +93,15 @@ function WalletData() {
                     Use the tabs to switch between viewing your assets, transaction history, and the best performing tokens in your wallet.
                 </p>
                 <Tabs defaultValue="overview">
-                      <TabsList className="border-b border-gray-800 w-full justify-start rounded-none bg-transparent">
-                          <TabsTrigger
-                              value="overview"
-                              className="text-purple-400 data-[state=active]:border-b-2 data-[state=active]:border-purple-400"
-                          >
+                <TabsList className="grid w-full grid-cols-3 bg-gray-800/50 rounded-lg p-1">
+                <TabsTrigger value="overview" className="rounded-md data-[state=active]:bg-blue-500/20">
+
                               Overview/Assets
                           </TabsTrigger>
-                          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-                          <TabsTrigger value="bestperforming">BestPerforming</TabsTrigger>
+                          <TabsTrigger value="bestperforming" className="rounded-md data-[state=active]:bg-blue-500/20">
+                          Best Performing</TabsTrigger>
+                          <TabsTrigger value="transactions" className="rounded-md data-[state=active]:bg-blue-500/20">
+                          Transactions</TabsTrigger>
                       </TabsList>
                       <TabsContent value="overview"><AssetsTable tokens={tokens} /></TabsContent>
                       <TabsContent value="transactions"><TransactionTable wallet={wallet} /></TabsContent>

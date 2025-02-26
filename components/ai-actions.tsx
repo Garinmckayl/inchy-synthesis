@@ -138,9 +138,9 @@ export function AiActions() {
 
   return (
     <div className="relative">
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 to-purple-500/10 blur-3xl" />
+      <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 to-purple-500/10 blur-3xl border rounded-xl" />
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <Card className="w-[400px] bg-[#111111]/90 border-gray-800/50 backdrop-blur-xl relative">
+        <Card className="w-[400px] bg-[#111111]/90 border-gray-800/50 backdrop-blur-xl relative border rounded-xl">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-lg" />
           <CardHeader className="flex flex-row items-center justify-between pb-2 relative">
             <div className="flex items-center space-x-2">

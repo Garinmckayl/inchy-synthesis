@@ -10,8 +10,13 @@ import { AiActions } from "@/components/ai-actions"
 import NetWorthCard from "@/components/net-worth-card"
 import { Navbar } from "@/components/navbar";
 import WalletData from "@/components/showcaseWalletData";
+import Avatar from "boring-avatars";
+import { usePrivy } from "@privy-io/react-auth";
 
-export default function Page() {
+
+export default function Dashboard() {
+    const { login, authenticated, user, logout, ready } = usePrivy();
+
   return (
     <><Navbar /><div className="min-h-screen bg-[#0c1013] text-white">
  
@@ -62,7 +67,8 @@ export default function Page() {
           <main className="container mx-auto px-4 py-8">
               <div className="mb-8 flex flex-col sm:flex-row items-start gap-8">
                   <div className="relative group w-24 mx-auto sm:mx-0">
-                      <div className="h-24 w-24 rounded bg-green-400" />
+                      {/* <div className="h-24 w-24 rounded bg-green-400" /> */}
+                      <Avatar name={user?.email ? user.email : user?.wallet} className="h-24 w-24 rounded" variant="beam"/>
                       <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                               <Eye className="h-4 w-4" />

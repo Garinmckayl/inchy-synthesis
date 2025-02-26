@@ -3,6 +3,7 @@ import TokenRow from './TokenRow';
 import { AssestsTableStyle } from "../styles/AssetsTableStyle"; // Import unified theme classes
 import { getImages } from '@/lib/coinGecko';
 import { cn } from '@/lib/utils';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from './ui/table';
 
 /**
  * AssetsTable component displays a table of tokens with their details.
@@ -28,21 +29,9 @@ const AssetsTable = ({ tokens }) => {
   }, [tokens]);
 
   return (
-    <div id="AssetsTable"
-    //  className={`${AssestsTableStyle.tableContainer}`}  
-    
-    className={cn(
-        "flex flex-col",
-        "w-[280px] shrink-0",
-        "bg-zinc-900/70",
-        "rounded-xl",
-        "border border-zinc-800",
-        "hover:border-zinc-700",
-        "transition-all duration-200",
-        "shadow-sm backdrop-blur-xl",
-      )}
-      >
-      <table className={`${AssestsTableStyle.table} rounded-lg w-full`}>
+    <div className="rounded-xl border border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+
+      {/* <table className={`${AssestsTableStyle.table} rounded-lg w-full`}>
         <thead className={AssestsTableStyle.thead}>
           <tr>
             <th className={AssestsTableStyle.th}>Token Name</th>
@@ -57,7 +46,46 @@ const AssetsTable = ({ tokens }) => {
             <TokenRow key={symbol} symbol={symbol} data={data} iconsMap={iconsMap} />
           ))}
         </tbody>
-      </table>
+      </table> */}
+
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="text-blue-400">Token Name</TableHead>
+            <TableHead className="text-right text-blue-400">Amount</TableHead>
+            <TableHead className="text-right text-blue-400">24h Change (%)</TableHead>
+            <TableHead className="text-right text-blue-400">Price (USD)</TableHead>
+            <TableHead className="text-right text-blue-400">Total (USD)</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+        {tokens && tokens.map(([symbol, data]) => {
+            const iconUrl = iconsMap[data.name.toLowerCase().replace(/\s+/g, '-')];
+
+          return(
+
+         
+            <TableRow key={symbol} className="hover:bg-gray-800/50 transition-colors">
+              <TableCell className="font-medium text-gray-200 flex">
+              {iconUrl ? (
+              <img src={iconUrl} alt={`${data.name} icon`} className="w-8 h-8" />
+            ) : (
+              <div className="w-8 h-8" />
+            )}
+                {data.name} ({symbol})
+              </TableCell>
+              <TableCell className="text-right text-gray-300">{data.balance.toFixed(3)}</TableCell>
+              <TableCell className={`text-right ${data.price.diff >= 0 ? "text-green-400" : "text-red-400"}`}>
+                {data.price.diff >= 0 ? "+" : ""}
+                {data.price.diff}%
+              </TableCell>
+              <TableCell className="text-right text-gray-300">{data.price.rate.toFixed(3)}$</TableCell>
+              <TableCell className="text-right text-gray-300">{data.balanceInUsd.toFixed(2)}$</TableCell>
+            </TableRow>
+ )})}
+        </TableBody>
+      </Table>
     </div>
   );
 };

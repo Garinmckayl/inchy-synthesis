@@ -4,6 +4,9 @@ import { fetchFees } from '@lib/feesUtils';
 import { getETH, getBNB } from '@lib/coinGecko';
 import { cn } from '@/lib/utils';
 import { ArrowRight, CoinsIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { GasPump } from '@phosphor-icons/react';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 /**
  * WalletFees calculates and displays the total gas fees in USD for Ethereum and BNB transactions.
  * @param {Object} props - Component props.
@@ -68,7 +71,7 @@ function WalletFees({ address }) {
  */}
 
 
-
+{/* 
             <div
             className={cn(
               "flex flex-col",
@@ -133,7 +136,28 @@ function WalletFees({ address }) {
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
+          </div> */}
+
+
+          <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        <Card className="bg-[#111111]/90 border-gray-800/50 backdrop-blur-xl relative overflow-hidden border rounded-xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-lg" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2 relative">
+            <CardTitle className="text-sm font-medium text-gray-200">Wallet Gas Fees</CardTitle>
+            <GasPump className="h-4 w-4 text-green-400" />
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold text-gray-100">${(ethFees + bnbFees).toFixed(2)}</div>
+            <p className="text-xs text-gray-400 mt-1"> ETH fees: ${ethFees.toFixed(2)}
+                  <br />
+                  BNB fees: ${bnbFees.toFixed(2)}</p>
+          </CardContent>
+        </Card>
+      </motion.div>
 
         </>
     );

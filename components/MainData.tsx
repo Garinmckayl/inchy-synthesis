@@ -14,7 +14,10 @@ import {
     PiggyBank,
     TrendingUp,
     CreditCard,
+    Wallet,
   } from "lucide-react" 
+import { motion } from "framer-motion";
+import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
 
 
 /**
@@ -37,9 +40,9 @@ function MainData({ address, tokens }) {
   }, [tokens]);
 
   return (
-    <div className={styles.container}>
-      <div className={styles.gridContainer}>
-        {/* <div className={styles.totalBalanceCard}>
+    // <div className={styles.container}>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* <div className={styles.totalBalanceCard}>
           <div className="text-center">
             <div className="font-semibold text-xl sm:text-2xl mb-2">
               Total Balance:
@@ -50,7 +53,7 @@ function MainData({ address, tokens }) {
           </div>
         </div> */}
 
-        <div
+        {/* <div
             className={cn(
               "flex flex-col",
               "w-[280px] shrink-0",
@@ -107,16 +110,34 @@ function MainData({ address, tokens }) {
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
-          </div>
+          </div> */}
 
-        <div className={styles.walletFeesCard}>
+          <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <Card className="bg-[#111111]/90 border-gray-800/50 backdrop-blur-xl relative overflow-hidden rounded-xl border">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-lg" />
+          <CardHeader className="flex flex-row items-center justify-between pb-2 relative">
+            <CardTitle className="text-sm font-medium text-gray-200">Total Balance</CardTitle>
+            <Wallet className="h-4 w-4 text-blue-400" />
+          </CardHeader>
+          <CardContent className="relative">
+            <div className="text-2xl font-bold text-gray-100">${totalBalance.toFixed(2)}</div>
+            {/* <p className="text-xs text-gray-400 mt-1">+$2,345.20 (6.58%)</p> */}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+        <div>
           <WalletFees address={address} />
         </div>
         <div className={styles.chartCard}>
           <DistributionChart tokens={topBalances} />
         </div>
       </div>
-    </div>
+    // </div>
   );
 }
 
