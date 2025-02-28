@@ -3,19 +3,103 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { usePrivy } from "@privy-io/react-auth";
-import { Home, LogOut, Wallet } from "lucide-react";
+import { Bell, Home, LogOut, Settings, User, Wallet, SparklesIcon, ChartAreaIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import FeaturesButton from "@/components/features";
 import { AccountDetailtDialog } from "./account-detail-dialog";
 import {SubscribeDialog} from "./subscribe-dialog";
+import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 
 
 interface NavbarProps {
   onSubscribe: () => void;
 }
 
+
+interface MenuItem {
+  icon: React.ReactNode
+  label: string
+  href: string
+  gradient: string
+  iconColor: string
+}
+
+const menuItems: MenuItem[] = [
+  {
+    icon: <Home className="h-5 w-5" />,
+    label: "Home",
+    href: "/",
+    gradient: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.06) 50%, rgba(29,78,216,0) 100%)",
+    iconColor: "text-blue-500",
+  },
+  {
+    icon: <ChartAreaIcon className="h-5 w-5" />,
+    label: "Dashboard",
+    href: "/dashboard",
+    gradient: "radial-gradient(circle, rgba(249,115,22,0.15) 0%, rgba(234,88,12,0.06) 50%, rgba(194,65,12,0) 100%)",
+    iconColor: "text-orange-500",
+  },
+  // {
+  //   icon: <SparklesIcon className="h-5 w-5" />,
+  //   label: "Subscribe",
+  //   href: "#",
+  //   gradient: "radial-gradient(circle, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.06) 50%, rgba(21,128,61,0) 100%)",
+  //   iconColor: "text-green-500",
+  // },
+  // {
+  //   icon: <User className="h-5 w-5" />,
+  //   label: "Account",
+  //   href: "#",
+  //   gradient: "radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.06) 50%, rgba(185,28,28,0) 100%)",
+  //   iconColor: "text-red-500",
+  // },
+]
+
+const itemVariants = {
+  initial: { rotateX: 0, opacity: 1 },
+  hover: { rotateX: -90, opacity: 0 },
+}
+
+const backVariants = {
+  initial: { rotateX: 90, opacity: 0 },
+  hover: { rotateX: 0, opacity: 1 },
+}
+
+const glowVariants = {
+  initial: { opacity: 0, scale: 0.8 },
+  hover: {
+    opacity: 1,
+    scale: 2,
+    transition: {
+      opacity: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
+      scale: { duration: 0.5, type: "spring", stiffness: 300, damping: 25 },
+    },
+  },
+}
+
+const navGlowVariants = {
+  initial: { opacity: 0 },
+  hover: {
+    opacity: 1,
+    transition: {
+      duration: 0.5,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+}
+
+const sharedTransition = {
+  type: "spring",
+  stiffness: 100,
+  damping: 20,
+  duration: 0.5,
+}
+
 export function Navbar({ onSubscribe }: NavbarProps) {
   // console.log(onSubscribe)
+    const isDarkTheme = useTheme()
+
   const [data, setData] = useState(null);
   console.log(data)
 
@@ -62,115 +146,169 @@ export function Navbar({ onSubscribe }: NavbarProps) {
   }, [authenticated, user]); // Run this effect when authenticated or user changes
 
 
-
-
-
-
-  // useEffect(() => {
-
-  //   const fetchBalance = async () => {
-  //     const apiKey = 'X7B2PMSTDXEZ9EUI586QT1529S3FGPBEYH';
-  //     const address = '0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae';
-  //     const url = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=balance&address=${address}&tag=latest&apikey=${apiKey}`;
-
-  //     try {
-  //       const response = await fetch(url);
-  //       return await response.json();
-  //     } catch (error) {
-  //       console.error('Error fetching balance:', error);
-  //       return null;
-  //     }
-  //   };
-
-  //   const fetchLogs = async () => {
-  //     const apiKey = 'X7B2PMSTDXEZ9EUI586QT1529S3FGPBEYH';
-  //     const address = '0xbd3531da5cf5857e7cfaa92426877b022e612cf8';
-  //     const url = `https://api.etherscan.io/v2/api?chainid=1&module=logs&action=getLogs&address=${address}&fromBlock=12878196&toBlock=12878196&page=1&offset=1000&apikey=${apiKey}`;
-
-  //     try {
-  //       const response = await fetch(url);
-  //       return await response.json();
-  //     } catch (error) {
-  //       console.error('Error fetching logs:', error);
-  //       return null;
-  //     }
-  //   };
-
-  //   const fetchTransactions = async () => {
-  //     const apiKey = 'X7B2PMSTDXEZ9EUI586QT1529S3FGPBEYH';
-  //     const address = '0xc5102fE9359FD9a28f877a67E36B0F050d81a3CC';
-  //     const url = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=10&sort=asc&apikey=${apiKey}`;
-
-  //     try {
-  //       const response = await fetch(url);
-  //       return await response.json();
-  //     } catch (error) {
-  //       console.error('Error fetching transactions:', error);
-  //       return null;
-  //     }
-  //   };
-
-  //   const fetchData = async () => {
-  //     try {
-  //       const [balance, logs, transactions] = await Promise.all([
-  //         fetchBalance(),
-  //         fetchLogs(),
-  //         fetchTransactions(),
-  //       ]);
-
-  //       setData({ balance, logs, transactions });
-  //       console.log('data', data)
-  //     } catch (error) {
-  //       console.error('Error fetching data:', error);
-  //     }
-  //   };
-
-  //   fetchData(); // Run the requests once
-
-  // }, []); // Empty dependency array ensures this runs once
-
-
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-black/50 backdrop-blur-xl">
+
+
+          <motion.nav
+      className="p-2 rounded-2xl bg-gradient-to-b from-background/80 to-background/40 backdrop-blur-lg border border-border/40 shadow-lg relative overflow-hidden sticky top-0 z-50 w-full border-b bg-black/50 backdrop-blur-xl"
+      initial="initial"
+      whileHover="hover"
+    >
       <div className="container flex h-14 items-center">
-        <Link href="/" className="flex items-center space-x-2">
+           <Link href="/" className="flex items-center space-x-2">
           <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent ml-28">
-            Inchy.ai
-          </span>
+             Inchy.ai
+           </span>
         </Link>
-        <div className="flex flex-1 items-center justify-end space-x-2">
-          {ready && (
-            <>
-                      {/* {authenticated && <AccountDetailtDialog />} */}
+      <motion.div
+        className={`absolute -inset-2 bg-gradient-radial from-transparent  ${
+          isDarkTheme
+            ? "via-blue-400/30 via-30% via-purple-400/30 via-60% via-red-400/30 via-90%"
+            : "via-blue-400/20 via-30% via-purple-400/20 via-60% via-red-400/20 via-90%"
+        } to-transparent rounded-3xl z-0 pointer-events-none`}
+        variants={navGlowVariants}
+      />
+      <ul className="flex items-center gap-2 relative z-10  flex-1 items-center justify-end space-x-2">
+        {menuItems.map((item, index) => (
+          <motion.li key={item.label} className="relative">
+            <motion.div
+              className="block rounded-xl overflow-visible group relative"
+              style={{ perspective: "600px" }}
+              whileHover="hover"
+              initial="initial"
+            >
+              <motion.div
+                className="absolute inset-0 z-0 pointer-events-none"
+                variants={glowVariants}
+                style={{
+                  background: item.gradient,
+                  opacity: 0,
+                  borderRadius: "16px",
+                }}
+              />
+              <motion.a
+                href={item.href}
+                className="flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
+                variants={itemVariants}
+                transition={sharedTransition}
+                style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
+              >
+                <span className={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}>
+                  {item.icon}
+                </span>
+                <span>{item.label}</span>
+              </motion.a>
+              <motion.a
+                href={item.href}
+                className="flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
+                variants={backVariants}
+                transition={sharedTransition}
+                style={{ transformStyle: "preserve-3d", transformOrigin: "center top", rotateX: 90 }}
+              >
+                <span className={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}>
+                  {item.icon}
+                </span>
+                <span>{item.label}</span>
+              </motion.a>
+            </motion.div>
+          </motion.li>
+        ))}
 
-              {authenticated ? (
-                <>
-                                <Link href={'/dashboard'} >
+          <AccountDetailtDialog/>
 
-        <Button >
-          <Home className="mr-2 h-4 w-4" />
-          Dashboard
-        </Button>
-        </Link>
-        <AccountDetailtDialog />
-                  </>
-              ) : (
-                <Button variant="ghost" onClick={handleLogin}>
-                  <Wallet className="mr-2 h-4 w-4" />
-                  Connect Wallet
-                </Button>
-              )}
-            </>
-          )}
-          <Button className="mr-8" onClick={onSubscribe}>Subscribe</Button>
-          <FeaturesButton />
-
-          <SubscribeDialog
-            onSubscribe={onSubscribe}
-            isOpen={isOpen}
-            onOpenChange={setSubscribeDialogOpen}
-          />        </div>
+          <motion.li className="relative" onClick={onSubscribe}>
+            <motion.div
+              className="block rounded-xl overflow-visible group relative"
+              style={{ perspective: "600px" }}
+              whileHover="hover"
+              initial="initial"
+            >
+              <motion.div
+                className="absolute inset-0 z-0 pointer-events-none"
+                variants={glowVariants}
+                style={{
+                  background: "radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.06) 50%, rgba(185,28,28,0) 100%)",
+                  opacity: 0,
+                  borderRadius: "16px",
+                }}
+              />
+              <motion.a
+                // href={}
+                className="flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
+                variants={itemVariants}
+                transition={sharedTransition}
+                style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
+              >
+                <span className={`transition-colors duration-300 group-hover:text-red-500 text-foreground`}>
+                <SparklesIcon className="h-5 w-5" />
+                </span>
+                <span>Subscribe</span>
+              </motion.a>
+              <motion.a
+                // href={}
+                className="flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
+                variants={backVariants}
+                transition={sharedTransition}
+                style={{ transformStyle: "preserve-3d", transformOrigin: "center top", rotateX: 90 }}
+              >
+                <span className={`transition-colors duration-300 group-hover:text-red-500 text-foreground`}>
+                  <SparklesIcon className="h-5 w-5" />
+                </span>
+                <span>Subscribe</span>
+              </motion.a>
+            </motion.div>
+          </motion.li>
+      </ul>
       </div>
-    </header>
+      <SubscribeDialog
+            onSubscribe={onSubscribe}
+             isOpen={isOpen}
+            onOpenChange={setSubscribeDialogOpen}
+           />    
+    </motion.nav>
+    // <header className="sticky top-0 z-50 w-full border-b bg-black/50 backdrop-blur-xl">
+    //   <div className="container flex h-14 items-center">
+    //     <Link href="/" className="flex items-center space-x-2">
+    //       <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent ml-28">
+    //         Inchy.ai
+    //       </span>
+    //     </Link>
+    //     <div className="flex flex-1 items-center justify-end space-x-2">
+    //       {ready && (
+    //         <>
+    //                   {/* {authenticated && <AccountDetailtDialog />} */}
+
+    //           {authenticated ? (
+    //             <>
+    //                             <Link href={'/dashboard'} >
+
+    //     <Button >
+    //       <Home className="mr-2 h-4 w-4" />
+    //       Dashboard
+    //     </Button>
+    //     </Link>
+    //     <AccountDetailtDialog />
+    //               </>
+    //           ) : (
+    //             <Button variant="ghost" onClick={handleLogin}>
+    //               <Wallet className="mr-2 h-4 w-4" />
+    //               Connect Wallet
+    //             </Button>
+    //           )}
+    //         </>
+    //       )}
+    //       <Button className="mr-8" onClick={onSubscribe}>Subscribe</Button>
+    //       <FeaturesButton />
+
+    //       <SubscribeDialog
+    //         onSubscribe={onSubscribe}
+    //         isOpen={isOpen}
+    //         onOpenChange={setSubscribeDialogOpen}
+    //       />        </div>
+    //   </div>
+
+
+
+    // </header>
   );
 }
