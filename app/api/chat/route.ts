@@ -234,6 +234,38 @@ export async function POST(req: Request) {
           };
         },
       }),
+      wallet_analysis: tool({
+        description:
+          "Analyze a user's crypto wallet to identify potential opportunities.",
+        parameters: z.object({
+          wallet: z.array(
+            z
+              .string()
+              .describe(
+                "user's wallet address."
+              )
+          ),
+          maxResults: z.array(
+            z
+              .number()
+              .describe(
+                "Array of maximum number of results to return per query."
+              )
+              .default(5)
+          ),
+        }),
+        execute: async ({
+          wallet,
+        }: {
+          wallet: string[];
+        }) => {
+
+
+          return {
+            analysis: "",
+          };
+        },
+      }),
       stock_chart: tool({
         description:
           "Write and execute Python code to find stock data and generate a stock chart.",

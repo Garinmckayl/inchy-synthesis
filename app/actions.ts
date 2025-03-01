@@ -1,7 +1,7 @@
 // app/actions.ts
 "use server";
 
-import { SearchGroupId } from "../src/components/lib/utils";
+import { SearchGroupId } from "@/lib/utils";
 import { openai } from "@ai-sdk/openai";
 import { generateObject } from "ai";
 import { z } from "zod";
@@ -65,6 +65,7 @@ const groupTools = {
     "crypto_chart",
     "retrieve",
     "code_interpreter",
+    "wallet_analysis",
   ] as const,
   // associate: ["academic_search", "code_interpreter"] as const,
   // chat: ["youtube_search"] as const,

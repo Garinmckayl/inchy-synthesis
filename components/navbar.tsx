@@ -3,19 +3,19 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { usePrivy } from "@privy-io/react-auth";
-import { Bell, Home, LogOut, Settings, User, Wallet, SparklesIcon, ChartAreaIcon } from "lucide-react";
+import { Bell, Home, LogOut, Settings, User, Wallet, SparklesIcon, ChartAreaIcon, Building2, Info, LogIn } from "lucide-react";
 import { useEffect, useState } from "react";
 import FeaturesButton from "@/components/features";
 import { AccountDetailtDialog } from "./account-detail-dialog";
 import {SubscribeDialog} from "./subscribe-dialog";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
-
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 interface NavbarProps {
   onSubscribe: () => void;
 }
-
 
 interface MenuItem {
   icon: React.ReactNode
@@ -32,29 +32,35 @@ const menuItems: MenuItem[] = [
     href: "/",
     gradient: "radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.06) 50%, rgba(29,78,216,0) 100%)",
     iconColor: "text-blue-500",
-  },
+  }
+];
+
+const authenticatedItems: MenuItem[] = [
   {
     icon: <ChartAreaIcon className="h-5 w-5" />,
     label: "Dashboard",
     href: "/dashboard",
     gradient: "radial-gradient(circle, rgba(249,115,22,0.15) 0%, rgba(234,88,12,0.06) 50%, rgba(194,65,12,0) 100%)",
     iconColor: "text-orange-500",
+  }
+];
+
+const unauthenticatedItems: MenuItem[] = [
+  {
+    icon: <Building2 className="h-5 w-5" />,
+    label: "Enterprise",
+    href: "/enterprise",
+    gradient: "radial-gradient(circle, rgba(147,51,234,0.15) 0%, rgba(126,34,206,0.06) 50%, rgba(107,33,168,0) 100%)",
+    iconColor: "text-purple-500",
   },
-  // {
-  //   icon: <SparklesIcon className="h-5 w-5" />,
-  //   label: "Subscribe",
-  //   href: "#",
-  //   gradient: "radial-gradient(circle, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.06) 50%, rgba(21,128,61,0) 100%)",
-  //   iconColor: "text-green-500",
-  // },
-  // {
-  //   icon: <User className="h-5 w-5" />,
-  //   label: "Account",
-  //   href: "#",
-  //   gradient: "radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.06) 50%, rgba(185,28,28,0) 100%)",
-  //   iconColor: "text-red-500",
-  // },
-]
+  {
+    icon: <Info className="h-5 w-5" />,
+    label: "About",
+    href: "/about",
+    gradient: "radial-gradient(circle, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.06) 50%, rgba(21,128,61,0) 100%)",
+    iconColor: "text-green-500",
+  }
+];
 
 const itemVariants = {
   initial: { rotateX: 0, opacity: 1 },
@@ -97,23 +103,67 @@ const sharedTransition = {
 }
 
 export function Navbar({ onSubscribe }: NavbarProps) {
-  // console.log(onSubscribe)
-    const isDarkTheme = useTheme()
+  const { login, authenticated } = usePrivy();
+  const { theme } = useTheme();
+
+  const renderNavItem = (item: MenuItem) => (
+    <motion.li className="relative" key={item.label}>
+      <motion.div
+        className="block rounded-xl overflow-visible group relative"
+        style={{ perspective: "600px" }}
+        whileHover="hover"
+        initial="initial"
+      >
+        <motion.div
+          className="absolute inset-0 z-0 pointer-events-none"
+          variants={glowVariants}
+          style={{
+            background: item.gradient,
+            opacity: 0,
+            borderRadius: "16px",
+          }}
+        />
+        <motion.a
+          href={item.href}
+          className="flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
+          variants={itemVariants}
+          transition={sharedTransition}
+          style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
+        >
+          <span className={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}>
+            {item.icon}
+          </span>
+          <span>{item.label}</span>
+        </motion.a>
+        <motion.a
+          href={item.href}
+          className="flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
+          variants={backVariants}
+          transition={sharedTransition}
+          style={{ transformStyle: "preserve-3d", transformOrigin: "center top", rotateX: 90 }}
+        >
+          <span className={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}>
+            {item.icon}
+          </span>
+          <span>{item.label}</span>
+        </motion.a>
+      </motion.div>
+    </motion.li>
+  );
 
   const [data, setData] = useState(null);
   console.log(data)
 
-  const { login, authenticated, user, logout, ready } = usePrivy();
   const [isOpen, setSubscribeDialogOpen] = useState(false);
-
 
   const handleLogin = async () => {
     console.log("Attempting to log in...");
     await login();
   };
+
   useEffect(() => {
-    if (authenticated && user) {
-      console.log("User logged in:", { authenticated, user });
+    if (authenticated) {
+      console.log("User logged in:", { authenticated });
       console.log("Calling API to check/create user...");
 
       const createUser = async () => {
@@ -132,7 +182,6 @@ export function Navbar({ onSubscribe }: NavbarProps) {
         const data = await response.json();
         if (!data.isActive) {
           setSubscribeDialogOpen(true);
-        // alert('unsubscribed user')
         }
         console.log("API response:", data);
       };
@@ -143,172 +192,142 @@ export function Navbar({ onSubscribe }: NavbarProps) {
     } else if (!authenticated) {
       console.log("User is not authenticated or user object is missing.");
     }
-  }, [authenticated, user]); // Run this effect when authenticated or user changes
-
+  }, [authenticated]); // Run this effect when authenticated changes
 
   return (
-
-
-          <motion.nav
+    <motion.nav
       className="p-2 rounded-2xl bg-gradient-to-b from-background/80 to-background/40 backdrop-blur-lg border border-border/40 shadow-lg relative overflow-hidden sticky top-0 z-50 w-full border-b bg-black/50 backdrop-blur-xl"
       initial="initial"
       whileHover="hover"
     >
-      <div className="container flex h-14 items-center">
-           <Link href="/" className="flex items-center space-x-2">
-          <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent ml-28">
-             Inchy.ai
-           </span>
-        </Link>
       <motion.div
-        className={`absolute -inset-2 bg-gradient-radial from-transparent  ${
-          isDarkTheme
+        className={cn(
+          "absolute -inset-2 bg-gradient-radial from-transparent",
+          theme === "dark"
             ? "via-blue-400/30 via-30% via-purple-400/30 via-60% via-red-400/30 via-90%"
-            : "via-blue-400/20 via-30% via-purple-400/20 via-60% via-red-400/20 via-90%"
-        } to-transparent rounded-3xl z-0 pointer-events-none`}
+            : "via-blue-400/20 via-30% via-purple-400/20 via-60% via-red-400/20 via-90%",
+          "to-transparent rounded-3xl z-0 pointer-events-none"
+        )}
         variants={navGlowVariants}
       />
-      <ul className="flex items-center gap-2 relative z-10  flex-1 items-center justify-end space-x-2">
-        {menuItems.map((item, index) => (
-          <motion.li key={item.label} className="relative">
-            <motion.div
-              className="block rounded-xl overflow-visible group relative"
-              style={{ perspective: "600px" }}
-              whileHover="hover"
-              initial="initial"
-            >
-              <motion.div
-                className="absolute inset-0 z-0 pointer-events-none"
-                variants={glowVariants}
-                style={{
-                  background: item.gradient,
-                  opacity: 0,
-                  borderRadius: "16px",
-                }}
-              />
-              <motion.a
-                href={item.href}
-                className="flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
-                variants={itemVariants}
-                transition={sharedTransition}
-                style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
-              >
-                <span className={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}>
-                  {item.icon}
-                </span>
-                <span>{item.label}</span>
-              </motion.a>
-              <motion.a
-                href={item.href}
-                className="flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
-                variants={backVariants}
-                transition={sharedTransition}
-                style={{ transformStyle: "preserve-3d", transformOrigin: "center top", rotateX: 90 }}
-              >
-                <span className={`transition-colors duration-300 group-hover:${item.iconColor} text-foreground`}>
-                  {item.icon}
-                </span>
-                <span>{item.label}</span>
-              </motion.a>
-            </motion.div>
-          </motion.li>
-        ))}
 
-          <AccountDetailtDialog/>
+      <div className="container flex h-14 items-center">
+        <Link href="/" className="flex items-center space-x-2">
+          <Image
+            src="/logo.svg"
+            alt="Inchy Logo"
+            width={128}
+            height={72}
+            className="ml-24 rounded-full"
+          />
+          {/* <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+            Inchy.ai
+          </span> */}
+        </Link>
 
-          <motion.li className="relative" onClick={onSubscribe}>
-            <motion.div
-              className="block rounded-xl overflow-visible group relative"
-              style={{ perspective: "600px" }}
-              whileHover="hover"
-              initial="initial"
-            >
-              <motion.div
-                className="absolute inset-0 z-0 pointer-events-none"
-                variants={glowVariants}
-                style={{
-                  background: "radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.06) 50%, rgba(185,28,28,0) 100%)",
-                  opacity: 0,
-                  borderRadius: "16px",
-                }}
-              />
-              <motion.a
-                // href={}
-                className="flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
-                variants={itemVariants}
-                transition={sharedTransition}
-                style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
-              >
-                <span className={`transition-colors duration-300 group-hover:text-red-500 text-foreground`}>
-                <SparklesIcon className="h-5 w-5" />
-                </span>
-                <span>Subscribe</span>
-              </motion.a>
-              <motion.a
-                // href={}
-                className="flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl"
-                variants={backVariants}
-                transition={sharedTransition}
-                style={{ transformStyle: "preserve-3d", transformOrigin: "center top", rotateX: 90 }}
-              >
-                <span className={`transition-colors duration-300 group-hover:text-red-500 text-foreground`}>
-                  <SparklesIcon className="h-5 w-5" />
-                </span>
-                <span>Subscribe</span>
-              </motion.a>
-            </motion.div>
-          </motion.li>
-      </ul>
+        <div className="flex flex-1 items-center justify-end space-x-2">
+          <ul className="flex items-center space-x-2 relative z-10">
+            {menuItems.map(renderNavItem)}
+            
+            {authenticated ? (
+              <>
+                {authenticatedItems.map(renderNavItem)}
+                <motion.li className="relative" onClick={onSubscribe}>
+                  <motion.div
+                    className="block rounded-xl overflow-visible group relative"
+                    style={{ perspective: "600px" }}
+                    whileHover="hover"
+                    initial="initial"
+                  >
+                    <motion.div
+                      className="absolute inset-0 z-0 pointer-events-none"
+                      variants={glowVariants}
+                      style={{
+                        background: "radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.06) 50%, rgba(185,28,28,0) 100%)",
+                        opacity: 0,
+                        borderRadius: "16px",
+                      }}
+                    />
+                    <motion.a
+                      className="flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl cursor-pointer"
+                      variants={itemVariants}
+                      transition={sharedTransition}
+                      style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
+                    >
+                      <span className="transition-colors duration-300 group-hover:text-red-500 text-foreground">
+                        <SparklesIcon className="h-5 w-5" />
+                      </span>
+                      <span>Subscribe</span>
+                    </motion.a>
+                    <motion.a
+                      className="flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl cursor-pointer"
+                      variants={backVariants}
+                      transition={sharedTransition}
+                      style={{ transformStyle: "preserve-3d", transformOrigin: "center top", rotateX: 90 }}
+                    >
+                      <span className="transition-colors duration-300 group-hover:text-red-500 text-foreground">
+                        <SparklesIcon className="h-5 w-5" />
+                      </span>
+                      <span>Subscribe</span>
+                    </motion.a>
+                  </motion.div>
+                </motion.li>
+                <AccountDetailtDialog />
+              </>
+            ) : (
+              <>
+                {unauthenticatedItems.map(renderNavItem)}
+                <motion.li className="relative">
+                  <motion.div
+                    className="block rounded-xl overflow-visible group relative"
+                    style={{ perspective: "600px" }}
+                    whileHover="hover"
+                    initial="initial"
+                    onClick={() => login()}
+                  >
+                    <motion.div
+                      className="absolute inset-0 z-0 pointer-events-none"
+                      variants={glowVariants}
+                      style={{
+                        background: "radial-gradient(circle, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.06) 50%, rgba(185,28,28,0) 100%)",
+                        opacity: 0,
+                        borderRadius: "16px",
+                      }}
+                    />
+                    <motion.a
+                      className="flex items-center gap-2 px-4 py-2 relative z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl cursor-pointer"
+                      variants={itemVariants}
+                      transition={sharedTransition}
+                      style={{ transformStyle: "preserve-3d", transformOrigin: "center bottom" }}
+                    >
+                      <span className="transition-colors duration-300 group-hover:text-red-500 text-foreground">
+                        <LogIn className="h-5 w-5" />
+                      </span>
+                      <span>Login</span>
+                    </motion.a>
+                    <motion.a
+                      className="flex items-center gap-2 px-4 py-2 absolute inset-0 z-10 bg-transparent text-muted-foreground group-hover:text-foreground transition-colors rounded-xl cursor-pointer"
+                      variants={backVariants}
+                      transition={sharedTransition}
+                      style={{ transformStyle: "preserve-3d", transformOrigin: "center top", rotateX: 90 }}
+                    >
+                      <span className="transition-colors duration-300 group-hover:text-red-500 text-foreground">
+                        <LogIn className="h-5 w-5" />
+                      </span>
+                      <span>Login</span>
+                    </motion.a>
+                  </motion.div>
+                </motion.li>
+              </>
+            )}
+          </ul>
+        </div>
       </div>
       <SubscribeDialog
-            onSubscribe={onSubscribe}
-             isOpen={isOpen}
-            onOpenChange={setSubscribeDialogOpen}
-           />    
+        onSubscribe={onSubscribe}
+        isOpen={isOpen}
+        onOpenChange={setSubscribeDialogOpen}
+      />    
     </motion.nav>
-    // <header className="sticky top-0 z-50 w-full border-b bg-black/50 backdrop-blur-xl">
-    //   <div className="container flex h-14 items-center">
-    //     <Link href="/" className="flex items-center space-x-2">
-    //       <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent ml-28">
-    //         Inchy.ai
-    //       </span>
-    //     </Link>
-    //     <div className="flex flex-1 items-center justify-end space-x-2">
-    //       {ready && (
-    //         <>
-    //                   {/* {authenticated && <AccountDetailtDialog />} */}
-
-    //           {authenticated ? (
-    //             <>
-    //                             <Link href={'/dashboard'} >
-
-    //     <Button >
-    //       <Home className="mr-2 h-4 w-4" />
-    //       Dashboard
-    //     </Button>
-    //     </Link>
-    //     <AccountDetailtDialog />
-    //               </>
-    //           ) : (
-    //             <Button variant="ghost" onClick={handleLogin}>
-    //               <Wallet className="mr-2 h-4 w-4" />
-    //               Connect Wallet
-    //             </Button>
-    //           )}
-    //         </>
-    //       )}
-    //       <Button className="mr-8" onClick={onSubscribe}>Subscribe</Button>
-    //       <FeaturesButton />
-
-    //       <SubscribeDialog
-    //         onSubscribe={onSubscribe}
-    //         isOpen={isOpen}
-    //         onOpenChange={setSubscribeDialogOpen}
-    //       />        </div>
-    //   </div>
-
-
-
-    // </header>
   );
 }

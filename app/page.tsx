@@ -11,7 +11,6 @@ import React, {
   useState,
   Fragment,
 } from "react";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -71,6 +70,11 @@ import {
   X,
   YoutubeIcon,
   Zap,
+  Fuel,
+  LineChartIcon,
+  CoinsIcon,
+  ShieldIcon,
+  AlertCircle
 } from "lucide-react";
 import { SuggestedQuestions } from "@/components/suggested-questions";
 import { Navbar } from "@/components/navbar";
@@ -107,14 +111,74 @@ import { cn, SearchGroupId } from "@/lib/utils";
 import MultiSearch from "@/components/multi-search";
 import { GeistMono } from "geist/font/mono";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 import { getChatsByUserId } from '@/lib/db/queries';
 import { convertToUIMessages } from '@/lib/utils';
 
 import { generateUUID } from '@/lib/utils';
 
+import { BorderTrail } from '@/components/core/border-trail';
+import { TextShimmer } from '@/components/core/text-shimmer';
 
 
+const features = [
+  {
+    title: "AI-Powered Wallet Analysis",
+    description: "Get detailed insights about your wallet's performance, security risks, and optimization opportunities",
+    icon: <CoinsIcon className="w-6 h-6 text-blue-500" />,
+    action: "Analyze Wallet",
+    bgGradient: "from-blue-500/10 via-blue-500/5 to-transparent"
+  },
+  {
+    title: "Smart Investment Automation",
+    description: "Set up automated investment strategies with custom parameters and risk management",
+    icon: <Crown className="w-6 h-6 text-purple-500" />,
+    action: "Setup Auto-Invest",
+    bgGradient: "from-purple-500/10 via-purple-500/5 to-transparent"
+  },
+  {
+    title: "Real-time Market Intelligence",
+    description: "Interactive charts and AI-powered market analysis to make informed decisions",
+    icon: <LineChartIcon className="w-6 h-6 text-green-500" />,
+    action: "View Markets",
+    bgGradient: "from-green-500/10 via-green-500/5 to-transparent"
+  },
+  {
+    title: "Gas & Fee Optimization",
+    description: "Save money with smart strategies for gas fees and transaction timing",
+    icon: <Fuel className="w-6 h-6 text-orange-500" />,
+    action: "Optimize Fees",
+    bgGradient: "from-orange-500/10 via-orange-500/5 to-transparent"
+  }
+];
+
+
+const metrics = [
+  {
+    title: "Security Score",
+    value: "92/100",
+    icon: <ShieldIcon className="w-5 h-5 text-green-500" />,
+    description: "Your wallet security is strong",
+  },
+  {
+    title: "Portfolio Performance",
+    value: "+15.4%",
+    icon: <TrendingUp className="w-5 h-5 text-blue-500" />,
+    description: "30-day return",
+  },
+  {
+    title: "Risk Alerts",
+    value: "2",
+    icon: <AlertCircle className="w-5 h-5 text-orange-500" />,
+    description: "Minor concerns detected",
+  },
+];
 
 // async function verifyToken() {
 //   const url = "/api/verify";
@@ -183,6 +247,112 @@ const CopyButton = ({ text }: { text: string }) => {
     </Button>
   );
 };
+
+
+
+const SearchLoadingState = ({
+  icon: Icon,
+  text,
+  color
+}: {
+  icon: LucideIcon,
+  text: string,
+  color: "red" | "green" | "orange" | "violet" | "gray" | "blue"
+}) => {
+  const colorVariants = {
+      red: {
+          background: "bg-red-50 dark:bg-red-950",
+          border: "from-red-200 via-red-500 to-red-200 dark:from-red-400 dark:via-red-500 dark:to-red-700",
+          text: "text-red-500",
+          icon: "text-red-500"
+      },
+      green: {
+          background: "bg-green-50 dark:bg-green-950",
+          border: "from-green-200 via-green-500 to-green-200 dark:from-green-400 dark:via-green-500 dark:to-green-700",
+          text: "text-green-500",
+          icon: "text-green-500"
+      },
+      orange: {
+          background: "bg-orange-50 dark:bg-orange-950",
+          border: "from-orange-200 via-orange-500 to-orange-200 dark:from-orange-400 dark:via-orange-500 dark:to-orange-700",
+          text: "text-orange-500",
+          icon: "text-orange-500"
+      },
+      violet: {
+          background: "bg-violet-50 dark:bg-violet-950",
+          border: "from-violet-200 via-violet-500 to-violet-200 dark:from-violet-400 dark:via-violet-500 dark:to-violet-700",
+          text: "text-violet-500",
+          icon: "text-violet-500"
+      },
+      gray: {
+          background: "bg-neutral-50 dark:bg-neutral-950",
+          border: "from-neutral-200 via-neutral-500 to-neutral-200 dark:from-neutral-400 dark:via-neutral-500 dark:to-neutral-700",
+          text: "text-neutral-500",
+          icon: "text-neutral-500"
+      },
+      blue: {
+          background: "bg-blue-50 dark:bg-blue-950",
+          border: "from-blue-200 via-blue-500 to-blue-200 dark:from-blue-400 dark:via-blue-500 dark:to-blue-700",
+          text: "text-blue-500",
+          icon: "text-blue-500"
+      }
+  };
+
+  const variant = colorVariants[color];
+
+  return (
+      <Card className="relative w-full h-[100px] my-4 overflow-hidden shadow-none">
+          <BorderTrail
+              className={cn(
+                  'bg-gradient-to-l',
+                  variant.border
+              )}
+              size={80}
+          />
+          <CardContent className="p-6">
+              <div className="relative flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                      <div className={cn(
+                          "relative h-10 w-10 rounded-full flex items-center justify-center",
+                          variant.background
+                      )}>
+                          <BorderTrail
+                              className={cn(
+                                  "bg-gradient-to-l",
+                                  variant.border
+                              )}
+                              size={40}
+                          />
+                          <Icon className={cn("h-5 w-5", variant.icon)} />
+                      </div>
+                      <div className="space-y-2">
+                          <TextShimmer
+                              className="text-base font-medium"
+                              duration={2}
+                          >
+                              {text}
+                          </TextShimmer>
+                          <div className="flex gap-2">
+                              {[...Array(3)].map((_, i) => (
+                                  <div
+                                      key={i}
+                                      className="h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-700 animate-pulse"
+                                      style={{
+                                          width: `${Math.random() * 40 + 20}px`,
+                                          animationDelay: `${i * 0.2}s`
+                                      }}
+                                  />
+                              ))}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </CardContent>
+      </Card>
+  );
+};
+
+
 
 interface MarkdownRendererProps {
   content: string;
@@ -804,13 +974,71 @@ export default function Home( {
                       </div>
                     </div>
                   ))} */}
-                   {!hasSubmitted && (
-                        <div className="text-center !font-sans">
-                            <h1 className="text-2xl sm:text-4xl mb-6 text-neutral-800 dark:text-neutral-100 font-syne mt-20">
-                                What do you want to search <br/> about crypto today?
-                            </h1>
-                        </div>
-                    )}
+{!hasSubmitted && (
+  <div className="w-full max-w-5xl mx-auto px-4 mb-12">
+    <div className="text-center mb-8">
+      <h1 className="text-3xl sm:text-4xl font-bold text-neutral-800 dark:text-neutral-100 font-syne mt-8 mb-4">
+        Your AI Financial Assistant
+      </h1>
+      <p className="text-lg text-neutral-600 dark:text-neutral-400">
+        Connect your wallet and let Inchy help you make smarter financial decisions
+      </p>
+    </div>
+
+    {/* Feature Cards Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+      {features.map((feature, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1 }}
+          className="group"
+        >
+          <Card className={cn(
+            "relative overflow-hidden bg-gradient-to-br border-gray-800/50 hover:border-gray-700/50 transition-all duration-300",
+            feature.bgGradient
+          )}>
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-gray-900/5 dark:bg-gray-100/5 backdrop-blur-sm">
+                  {feature.icon}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold mb-2 text-neutral-800 dark:text-neutral-100">
+                    {feature.title}
+                  </h3>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4 line-clamp-2">
+                    {feature.description}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    className="group-hover:text-purple-400 text-neutral-600 dark:text-neutral-400 p-0 h-auto font-medium"
+                  >
+                    {feature.action}
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      ))}
+    </div>
+
+    {/* Search Input */}
+    <div className="mt-12 relative">
+      <div className="absolute inset-0 flex items-center">
+        <div className="w-full border-t border-gray-800/30"></div>
+      </div>
+      <div className="relative flex justify-center text-sm">
+        <span className="px-4 text-neutral-500 dark:text-neutral-400 bg-white dark:bg-black text-base">
+          Ask Inchy anything about crypto
+        </span>
+      </div>
+    </div>
+  </div>
+)}
 
                   {memoizedMessages.map((message, index) => (
                     <div key={index}>
@@ -1127,106 +1355,53 @@ const ToolInvocationListView = memo(
         //     );
         // }
 
-        // if (toolInvocation.toolName === 'academic_search') {
-        //     if (!result) {
-        //         return <SearchLoadingState
-        //             icon={Book}
-        //             text="Searching academic papers..."
-        //             color="violet"
-        //         />;
-        //     }
+        if (toolInvocation.toolName === 'wallet_analysis') {
+            if (!result) {
+                return <SearchLoadingState
+                    icon={CoinsIcon}
+                    text="Analysing wallet..."
+                    color="violet"
+                />;
+            }
 
-        //     return (
-        //         <Card className="w-full my-4 overflow-hidden">
-        //             <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        //                 <div className="flex items-center gap-2">
-        //                     <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-600/20 flex items-center justify-center backdrop-blur-sm">
-        //                         <Book className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-        //                     </div>
-        //                     <div>
-        //                         <CardTitle>Academic Papers</CardTitle>
-        //                         <p className="text-sm text-muted-foreground">Found {result.results.length} papers</p>
-        //                     </div>
-        //                 </div>
-        //             </CardHeader>
-        //             <div className="px-4 pb-2">
-        //                 <div className="flex overflow-x-auto gap-4 no-scrollbar">
-        //                     {result.results.map((paper: AcademicResult, index: number) => (
-        //                         <motion.div
-        //                             key={paper.url || index}
-        //                             className="w-[400px] flex-none"
-        //                             initial={{ opacity: 0, y: 20 }}
-        //                             animate={{ opacity: 1, y: 0 }}
-        //                             transition={{ duration: 0.3, delay: index * 0.1 }}
-        //                         >
-        //                             <div className="h-[300px] relative group">
-        //                                 <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-violet-500/20 via-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            return (
+              <div className="space-y-6">
 
-        //                                 <div className="h-full relative backdrop-blur-sm bg-background/95 dark:bg-neutral-900/95 border border-neutral-200/50 dark:border-neutral-800/50 rounded-xl p-4 flex flex-col transition-all duration-500 group-hover:border-violet-500/20">
-        //                                     <h3 className="font-semibold text-xl tracking-tight mb-3 line-clamp-2 group-hover:text-violet-500 dark:group-hover:text-violet-400 transition-colors duration-300">
-        //                                         {paper.title}
-        //                                     </h3>
-
-        //                                     {paper.author && (
-        //                                         <div className="mb-3">
-        //                                             <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-muted-foreground bg-neutral-100 dark:bg-neutral-800 rounded-md">
-        //                                                 <User2 className="h-3.5 w-3.5 text-violet-500" />
-        //                                                 <span className="line-clamp-1">
-        //                                                     {paper.author.split(';')
-        //                                                         .slice(0, 2)
-        //                                                         .join(', ') +
-        //                                                         (paper.author.split(';').length > 2 ? ' et al.' : '')
-        //                                                     }
-        //                                                 </span>
-        //                                             </div>
-        //                                         </div>
-        //                                     )}
-
-        //                                     {paper.publishedDate && (
-        //                                         <div className="mb-4">
-        //                                             <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-muted-foreground bg-neutral-100 dark:bg-neutral-800 rounded-md">
-        //                                                 <Calendar className="h-3.5 w-3.5 text-violet-500" />
-        //                                                 {new Date(paper.publishedDate).toLocaleDateString()}
-        //                                             </div>
-        //                                         </div>
-        //                                     )}
-
-        //                                     <div className="flex-1 relative mb-4 pl-3">
-        //                                         <div className="absolute -left-0 top-1 bottom-1 w-[2px] rounded-full bg-gradient-to-b from-violet-500 via-violet-400 to-transparent opacity-50" />
-        //                                         <p className="text-sm text-muted-foreground line-clamp-4">
-        //                                             {paper.summary}
-        //                                         </p>
-        //                                     </div>
-
-        //                                     <div className="flex gap-2">
-        //                                         <Button
-        //                                             variant="ghost"
-        //                                             onClick={() => window.open(paper.url, '_blank')}
-        //                                             className="flex-1 bg-neutral-100 dark:bg-neutral-800 hover:bg-violet-100 dark:hover:bg-violet-900/20 hover:text-violet-600 dark:hover:text-violet-400 group/btn"
-        //                                         >
-        //                                             <FileText className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform duration-300" />
-        //                                             View Paper
-        //                                         </Button>
-
-        //                                         {paper.url.includes('arxiv.org') && (
-        //                                             <Button
-        //                                                 variant="ghost"
-        //                                                 onClick={() => window.open(paper.url.replace('abs', 'pdf'), '_blank')}
-        //                                                 className="bg-neutral-100 dark:bg-neutral-800 hover:bg-violet-100 dark:hover:bg-violet-900/20 hover:text-violet-600 dark:hover:text-violet-400 group/btn"
-        //                                             >
-        //                                                 <Download className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-300" />
-        //                                             </Button>
-        //                                         )}
-        //                                     </div>
-        //                                 </div>
-        //                             </div>
-        //                         </motion.div>
-        //                     ))}
-        //                 </div>
-        //             </div>
-        //         </Card>
-        //     );
-        // }
+        
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {metrics.map((metric, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card className="bg-neutral-900/50 border-neutral-800/50">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              {metric.icon}
+                              <h3 className="font-medium text-neutral-200">
+                                {metric.title}
+                              </h3>
+                            </div>
+                            <p className="text-2xl font-bold text-white mb-1">
+                              {metric.value}
+                            </p>
+                            <p className="text-sm text-neutral-400">
+                              {metric.description}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+            );
+        }
 
         // if (toolInvocation.toolName === "text_search") {
         //   if (!result) {
