@@ -59,6 +59,7 @@ model User {
   teams            String[]
   stripeCustomerId String?    @unique
   isActive         Boolean    @default(false)
+  wallets          WalletAnalysis[]
 }
 
 model Customer {
@@ -99,4 +100,17 @@ model Message {
   content   Json
   createdAt DateTime @default(now())
   chat      Chat     @relation("ChatMessages", fields: [chatId], references: [id], onDelete: Cascade) // Correct relation definition
+}
+
+model WalletAnalysis {
+  id        String   @id @default(cuid())
+  userId    String
+  address   String
+  network   String
+  analysis  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([address, network])
 }

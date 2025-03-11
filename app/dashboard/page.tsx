@@ -7,11 +7,12 @@ import { TokenList } from "@/components/token-list"
 import { ActivityFeed } from "@/components/activity-feed"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AiActions } from "@/components/ai-actions"
+import { WalletHealth } from "@/components/wallet-health"
 import NetWorthCard from "@/components/net-worth-card"
-import { Navbar } from "@/components/navbar";
-import WalletData from "@/components/showcaseWalletData";
-import Avatar from "boring-avatars";
-import { usePrivy } from "@privy-io/react-auth";
+import { Navbar } from "@/components/navbar"
+import WalletData from "@/components/showcaseWalletData"
+import Avatar from "boring-avatars"
+import { usePrivy } from "@privy-io/react-auth"
 
 
 export default function Dashboard() {
@@ -90,15 +91,13 @@ export default function Dashboard() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-1 xl:grid-cols-[1fr_400px] gap-4">
-              <WalletData/>
-                  <div className="space-y-6">
-                      <AiActions />
-                  </div>
-                  
+                <WalletData/>
+                <div className="space-y-6">
+                  <AiActions />
+                </div>
               </div>
              
           </main>
       </div></>
   )
 }
-

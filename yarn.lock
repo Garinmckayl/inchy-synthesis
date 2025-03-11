@@ -7,6 +7,14 @@
   resolved "https://registry.npmjs.org/@adraffy/ens-normalize/-/ens-normalize-1.11.0.tgz#42cc67c5baa407ac25059fcd7d405cc5ecdb0c33"
   integrity sha512-/3DDPKHqqIqxUULp8yP4zODUY1i+2xvVWsv8A79xGWdCAG+8sb0hRh0Rk2QyOJUnnbyPUAZYcpBuRe3nS2OIUg==
 
+"@ai-sdk/google@^1.1.20":
+  version "1.1.20"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/google/-/google-1.1.20.tgz#c0fb4287596ccfec56cb90ccc1eaddf525f966d7"
+  integrity sha512-vsYtmFYy5vQAovWWAqb9XoLZ01lmcfpfxviY8lMV92YwwbLLhYcaPQ4dKaaKo0tSksCWsO2Qehw8bN3eBxmZdA==
+  dependencies:
+    "@ai-sdk/provider" "1.0.10"
+    "@ai-sdk/provider-utils" "2.1.11"
+
 "@ai-sdk/openai@^1.1.5":
   version "1.1.5"
   resolved "https://registry.npmjs.org/@ai-sdk/openai/-/openai-1.1.5.tgz#6d03802e8368b4be528fd51db32aa2e663724b13"
@@ -14,6 +22,16 @@
   dependencies:
     "@ai-sdk/provider" "1.0.6"
     "@ai-sdk/provider-utils" "2.1.5"
+
+"@ai-sdk/provider-utils@2.1.11":
+  version "2.1.11"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/provider-utils/-/provider-utils-2.1.11.tgz#8bc94b81234ebfbaab841a07ca234e7a79c5e92e"
+  integrity sha512-lMnXA5KaRJidzW7gQmlo/SnX6D+AKk5GxHFcQtOaGOSJNmu/qcNZc1rGaO7K5qW52OvCLXtnWudR4cc/FvMpVQ==
+  dependencies:
+    "@ai-sdk/provider" "1.0.10"
+    eventsource-parser "^3.0.0"
+    nanoid "^3.3.8"
+    secure-json-parse "^2.7.0"
 
 "@ai-sdk/provider-utils@2.1.5":
   version "2.1.5"
@@ -24,6 +42,13 @@
     eventsource-parser "^3.0.0"
     nanoid "^3.3.8"
     secure-json-parse "^2.7.0"
+
+"@ai-sdk/provider@1.0.10":
+  version "1.0.10"
+  resolved "https://registry.yarnpkg.com/@ai-sdk/provider/-/provider-1.0.10.tgz#f537fec1e5459d4aeb8eb99bec015c327a01516d"
+  integrity sha512-pco8Zl9U0xwXI+nCLc0woMtxbvjU8hRmGTseAUiPHFLYAAL8trRPCukg69IDeinOvIeo1SmXxAIdWWPZOLb4Cg==
+  dependencies:
+    json-schema "^0.4.0"
 
 "@ai-sdk/provider@1.0.6":
   version "1.0.6"
@@ -1298,10 +1323,10 @@
     viem "^2.21.9"
     zustand "^5.0.0"
 
-"@privy-io/server-auth@^1.18.4":
-  version "1.18.4"
-  resolved "https://registry.yarnpkg.com/@privy-io/server-auth/-/server-auth-1.18.4.tgz#31b8855182013dc7cbf5b7d21d7125d44db6b0c1"
-  integrity sha512-FLSQRbzHhxjbkHVCjD+8Iw3+f4U3bJKj97sue9nOmumrpmxJkHhCDusqDR7le7yKrsntHYcOSNAX34FpjkMjQg==
+"@privy-io/server-auth@^1.18.12":
+  version "1.18.12"
+  resolved "https://registry.yarnpkg.com/@privy-io/server-auth/-/server-auth-1.18.12.tgz#80054fee7e8a73317f44a729203038ab53737cd3"
+  integrity sha512-Q964pFuMZBez/yeXSAUlgZqXyynB0juIAp1yLpsJ2H3EbHoWt1gFFbo/rKY/Zuo+qMiZwCclwPyVvWOpHsQh5A==
   dependencies:
     "@noble/curves" "^1.6.0"
     "@noble/hashes" "^1.5.0"
