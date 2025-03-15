@@ -17,7 +17,6 @@ import {
 } from 'ai';
 import Exa from 'exa-js';
 import { z } from 'zod';
-import { geolocation } from '@vercel/functions';
 import MemoryClient from 'mem0ai';
 
 
@@ -78,7 +77,6 @@ export async function POST(req: Request) {
     console.log(req)
     const { messages } = await req.json();
     const { systemPrompt, tools: activeTools } = await getGroupConfig("risk_security");
-    const geo = geolocation(req);
 
     console.log(messages);
 
