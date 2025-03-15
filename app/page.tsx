@@ -802,7 +802,7 @@ export default function Home( {
     },
   });
 
-  const handleSuggestedQuestionClick = useCallback(
+  const handleSuggestedQuestionClick = useCallback(   
     async (question: string) => {
     setHasSubmitted(true);
       setSuggestedQuestions([]);

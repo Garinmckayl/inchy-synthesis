@@ -9,7 +9,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-import { Globe, Book, Code } from "lucide-react";
+import { Globe, Book, Code, ShieldAlert } from "lucide-react";
 import type {
   CoreAssistantMessage,
   CoreMessage,
@@ -18,7 +18,7 @@ import type {
   ToolInvocation,
 } from "ai";
 
-export type SearchGroupId = "chat" | "analayser" | "trade";
+export type SearchGroupId = "chat" | "analayser" | "trade" | "risk_security";
 
 export const searchGroups = [
   {
@@ -27,7 +27,6 @@ export const searchGroups = [
     description: "Engage in crypto discussions",
     icon: Globe,
   },
-
   {
     id: "trade" as const,
     name: "Trade",
@@ -39,6 +38,12 @@ export const searchGroups = [
     name: "analyser",
     description: "Dig in to wallet",
     icon: Code,
+  },
+  {
+    id: "risk_security" as const,
+    name: "Risk & Security",
+    description: "Detect risks and vulnerabilities",
+    icon: ShieldAlert,
   },
 ] as const;
 

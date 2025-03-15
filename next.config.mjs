@@ -13,6 +13,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  
   async headers() {
     return [
       {
@@ -97,7 +98,21 @@ const nextConfig = {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
+    webpackMemoryOptimizations: true,
   },
+  webpack: (
+    config,
+    { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }
+  ) => {
+    if (config.cache && !dev) {
+      config.cache = Object.freeze({
+        type: 'memory',
+      })
+    }
+    // Important: return the modified config
+    return config
+  },
+  
 };
 
 mergeConfig(nextConfig, userConfig);
