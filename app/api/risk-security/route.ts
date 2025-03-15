@@ -21,7 +21,7 @@ import MemoryClient from 'mem0ai';
 
 
 // Allow streaming responses up to 600 seconds
-export const maxDuration = 600;
+export const maxDuration = 60;
 
 
 
