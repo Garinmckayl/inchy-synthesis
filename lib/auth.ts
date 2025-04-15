@@ -1,26 +1,29 @@
 // lib/privy.ts
 import type { PrivyClientConfig } from "@privy-io/react-auth";
-import { PrivyClient } from "@privy-io/server-auth";
+import { PrivyClient, type User as PrivyUser } from "@privy-io/server-auth"; // Import User type
 import { cookies } from "next/headers";
 
 // --- Your Configuration ---
 export const privyConfig: PrivyClientConfig = {
   loginMethods: ["email", "wallet"],
-  appearance: {
-    theme: "dark",
-    accentColor: "#676FFF",
-  },
-  embeddedWallets: {
-    createOnLogin: "users-without-wallets",
-  },
+  appearance: { /* ... */ },
+  embeddedWallets: { /* ... */ },
 };
 
-// --- Initialize Privy Client ---
-// Hardcoding temporarily to debug
+// --- Initialize Client (Use ENV Vars!) ---
+const PRIVY_APP_ID = process.env.PRIVY_APP_ID;
+const PRIVY_APP_SECRET = process.env.PRIVY_APP_SECRET;
+
+if (!PRIVY_APP_ID || !PRIVY_APP_SECRET) {
+  console.warn("Privy App ID or Secret missing from environment variables.");
+  // throw new Error("Privy environment variables not set."); // Consider throwing in prod
+}
+
+// Ensure client is only initialized if keys exist
 export const privyClient = new PrivyClient(
-  "cm5qnadbd01ejm51k0qtyolck",
-  "2QGDENiW3o4XwdsARYwuvqNM9Tn2hxfPB5iyMy9WcGnVNphDEx59ntLjUSqzzZHRkUtChNi6unchxQZ9nUmRZMhE"
-);
+    "cm5qnadbd01ejm51k0qtyolck",
+    "2QRisPgWvitTQgVe195fNTdvibYyMbNsetFXsmpYznoghwA1HegqDBR1ectVV3HVHgyjnYLDnswx1u6EYvWrvdyt",
+    );
 
 // --- Define Returned User Structure ---
 export interface AuthenticatedUser {
@@ -28,14 +31,16 @@ export interface AuthenticatedUser {
   name: string | null;
   email: string | null;
   image: string | null;
-  linkedAccounts: Array<{
-    type: string;
-    address?: string;
-  }>;
+  linkedAccounts: Readonly<PrivyUser['linkedAccounts']>; // Add linked accounts
 }
 
-// --- Get Privy User ---
+// --- Your getPrivyUser function (modified slightly) ---
 export async function getPrivyUser(token?: string): Promise<AuthenticatedUser | null> {
+  if (!privyClient) {
+    console.error("Privy client not initialized due to missing credentials.");
+    return null;
+  }
+
   try {
     // Get token from parameter or cookie
     let authToken = token;
@@ -45,16 +50,12 @@ export async function getPrivyUser(token?: string): Promise<AuthenticatedUser | 
     }
 
     if (!authToken) {
-      console.warn("No auth token provided");
+      console.warn("No auth token found");
       return null;
     }
 
-    // Log token for debugging
-    console.log('Attempting to verify token:', authToken.substring(0, 10) + '...');
-
     // Verify token
     const verifiedClaims = await privyClient.verifyAuthToken(authToken);
-    console.log('Token verified, user ID:', verifiedClaims.userId);
     
     // Get user data
     const user = await privyClient.getUser(verifiedClaims.userId);

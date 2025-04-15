@@ -1,372 +1,281 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { ethers } from "ethers";
-import { Scan, ChevronDown, ChevronUp, ExternalLink, LineChart, AlertTriangle } from "lucide-react"
+import { parseUnits, formatUnits } from 'ethers';
+import { Scan, ChevronDown, ChevronUp, ExternalLink, LineChart, AlertTriangle, Sparkles, Zap, CheckCircle2, Loader2 } from "lucide-react" // Added Loader2
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { Sparkles, Zap, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Navbar } from "@/components/navbar";
 import { toast } from "@/components/ui/use-toast";
+import { ProtocolYield, calculateNetApy } from "@/core/defi/protocols";
+import { usePrivy } from "@privy-io/react-auth";
 
-// Protocol Configuration
-const PROTOCOLS = {
-  AAVE: {
-    name: 'Aave V3',
-    contract: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
-    riskLevel: 'Medium',
-    minAPY: 2.5,
-    gasEstimate: 250000
-  },
-  LIDO: {
-    name: 'Lido',
-    contract: '0xae7ab96520de3a18e5e111b5eaab095312d7fe84',
-    riskLevel: 'Low',
-    minAPY: 3.5,
-    gasEstimate: 150000
-  },
-  EIGEN: {
-    name: 'EigenLayer',
-    contract: '0x858646372CC42E1A627fcE94aa7A7033e7CF075A',
-    riskLevel: 'High',
-    minAPY: 5.0,
-    gasEstimate: 350000
-  }
-};
-
-interface ProtocolYield {
-  protocol: string;
-  apy: number;
-  tvl: number;
-  riskLevel: string;
-  token: string;
-  gasEstimate: number;
+// Types for API responses
+interface ApiResponse {
+  yields: ProtocolYield[];
+  gasPriceGwei: number;
+  ethPriceUsd: number;
 }
 
-// Enhanced yield fetching with real-time data
-const fetchProtocolYields = async (): Promise<ProtocolYield[]> => {
-  try {
-    const yields: ProtocolYield[] = [];
+interface RecommendationResponse {
+  recommendedProtocol: ProtocolYield | null;
+  reason: string;
+}
 
-    // Fetch Lido data
-    try {
-      const lidoResponse = await fetch('https://eth-api.lido.fi/v1/protocol/steth/apr/sma');
-      const lidoData = await lidoResponse.json();
-      
-      if (lidoData?.data?.smaApr) {
-        yields.push({
-          protocol: 'Lido',
-          apy: lidoData.data.smaApr,
-          tvl: 21000000000, // Using approximate TVL since not in API response
-          riskLevel: 'Low',
-          token: 'stETH',
-          gasEstimate: 150000 // Approximate gas for staking
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching Lido data:', error);
-    }
-
-    // Fetch Aave data
-    try {
-      // First get all pools data
-      const aaveResponse = await fetch('https://api.expand.network/lendborrow/getpool', {
-        headers: {
-          'x-api-key': process.env.EXPAND_API_KEY || ''
-        }
-      });
-      const aaveData = await aaveResponse.json();
-      
-      // Find the ETH/WETH pool
-      const ethPool = aaveData?.find(pool => 
-        pool.underlyingAsset?.toLowerCase().includes('eth') ||
-        pool.symbol?.toLowerCase().includes('eth')
-      );
-
-      if (ethPool) {
-        // Get detailed pool stats
-        const poolStatsResponse = await fetch(`https://api.expand.network/pools/getstats?address=${ethPool.id}`, {
-          headers: {
-            'x-api-key': process.env.EXPAND_API_KEY || ''
-          }
-        });
-        const poolStats = await poolStatsResponse.json();
-
-        yields.push({
-          protocol: 'Aave',
-          apy: parseFloat(poolStats.supplyApy || '0') * 100,
-          tvl: parseFloat(poolStats.totalSupplyUSD || '0'),
-          riskLevel: 'Low',
-          token: 'ETH',
-          gasEstimate: 250000 // Approximate gas for supplying
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching Aave data:', error);
-    }
-
-    // Fetch EigenLayer data
-    try {
-      const eigenResponse = await fetch('https://api.dune.com/api/v1/eigenlayer/avs-stats', {
-        headers: {
-          'x-dune-api-key': process.env.NEXT_PUBLIC_DUNE_API_KEY || ''
-        }
-      });
-      const eigenData = await eigenResponse.json();
-
-      if (eigenData?.result?.rows?.length > 0) {
-        // Calculate total TVL across all AVS services
-        const totalTVL = eigenData.result.rows.reduce((sum, row) => sum + row.total_TVL, 0);
-        
-        // Calculate average APY (using a conservative estimate since APY isn't directly provided)
-        // Using ratio of total_TVL to EIGEN_TVL as a proxy for yield
-        const avgYield = eigenData.result.rows.reduce((sum, row) => {
-          const yieldRatio = row.EIGEN_TVL / row.total_TVL;
-          return sum + (yieldRatio * 100);
-        }, 0) / eigenData.result.rows.length;
-
-        yields.push({
-          protocol: 'EigenLayer',
-          apy: avgYield || 4.2, // Fallback to 4.2% if calculation fails
-          tvl: totalTVL || 500000000, // Fallback to 500M if calculation fails
-          riskLevel: 'Medium',
-          token: 'eETH',
-          gasEstimate: 300000 // Approximate gas for restaking
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching EigenLayer data:', error);
-      // Add fallback data for EigenLayer
-      yields.push({
-        protocol: 'EigenLayer',
-        apy: 4.2,
-        tvl: 500000000,
-        riskLevel: 'Medium',
-        token: 'eETH',
-        gasEstimate: 300000
-      });
-    }
-
-    if (yields.length === 0) {
-      throw new Error('No protocol data available');
-    }
-
-    return yields;
-  } catch (error) {
-    console.error('Error fetching protocol data:', error);
-    toast({
-      title: "Error fetching protocol data",
-      description: "Please try again later",
-      variant: "destructive"
-    });
-    return [];
-  }
-};
-  
-  const calculateOptimalStrategy = (yields: ProtocolYield[], userRiskLevel: number, gasPrice: number): ProtocolYield | null => {
-    const riskScores = { 'Low': 1, 'Medium': 2, 'High': 3 };
-    const userRiskThreshold = Math.ceil(userRiskLevel / 1.67); // Convert 1-5 scale to 1-3
-
-    // Filter protocols based on user risk tolerance
-    const eligibleYields = yields.filter(y => riskScores[y.riskLevel] <= userRiskThreshold);
-    if (eligibleYields.length === 0) return null;
-
-    // Calculate scores considering APY, TVL, gas costs, and risk
-    return eligibleYields.reduce((best, current) => {
-      const gasCost = (current.gasEstimate * gasPrice) / 1e9; // Convert to ETH
-      const annualizedReturn = (current.apy / 100) - (gasCost * 12); // Assuming monthly rebalancing
-      
-      const currentScore = (
-        annualizedReturn * 0.5 + // 50% weight on actual returns
-        (current.tvl / 1e9) * 0.3 + // 30% weight on TVL (normalized to billions)
-        (1 / riskScores[current.riskLevel]) * 0.2 // 20% weight on inverse risk score
-      );
-
-      const bestScore = best ? (
-        (best.apy / 100) * 0.5 +
-        (best.tvl / 1e9) * 0.3 +
-        (1 / riskScores[best.riskLevel]) * 0.2
-      ) : 0;
-
-      return currentScore > bestScore ? current : best;
-    }, null as ProtocolYield | null);
-  };
-  
-  const rebalanceFunds = async (signer: ethers.Signer, currentStrategy: ProtocolYield, newStrategy: ProtocolYield): Promise<boolean> => {
-    try {
-      const userAddress = await signer.getAddress();
-      const balance = await signer.provider!.getBalance(userAddress);
-      
-      // Check if user has enough balance
-      if (balance.lt(ethers.utils.parseEther('0.1'))) {
-        toast({
-          title: 'Insufficient balance',
-          description: 'You need at least 0.1 ETH to perform rebalancing',
-          variant: 'destructive'
-        });
-        return false;
-      }
-
-      // Get gas price and estimate total cost
-      const gasPrice = await signer.provider!.getGasPrice();
-      const totalGasEstimate = currentStrategy.gasEstimate + newStrategy.gasEstimate;
-      const gasCost = gasPrice.mul(totalGasEstimate);
-      
-      if (gasCost.gt(balance.div(4))) {
-        toast({
-          title: 'High gas costs',
-          description: 'Gas costs exceed 25% of transaction value',
-          variant: 'destructive'
-        });
-        return false;
-      }
-
-      // Execute rebalancing
-      if (currentStrategy.protocol === 'Aave') {
-        const aaveContract = new ethers.Contract(PROTOCOLS.AAVE.contract, AAVE_ABI, signer);
-        const tx = await aaveContract.withdraw(
-          ethers.constants.AddressZero, // ETH
-          ethers.constants.MaxUint256,
-          userAddress,
-          { gasLimit: currentStrategy.gasEstimate }
-        );
-        await tx.wait();
-      } else if (currentStrategy.protocol === 'Lido') {
-        const lidoContract = new ethers.Contract(PROTOCOLS.LIDO.contract, LIDO_ABI, signer);
-        const tx = await lidoContract.withdraw(
-          ethers.constants.MaxUint256,
-          { gasLimit: currentStrategy.gasEstimate }
-        );
-        await tx.wait();
-      }
-
-      // Small delay to ensure transactions are processed
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Deposit into new protocol
-      if (newStrategy.protocol === 'Aave') {
-        const aaveContract = new ethers.Contract(PROTOCOLS.AAVE.contract, AAVE_ABI, signer);
-        const tx = await aaveContract.supply(
-          ethers.constants.AddressZero,
-          ethers.constants.MaxUint256,
-          userAddress,
-          0,
-          { gasLimit: newStrategy.gasEstimate }
-        );
-        await tx.wait();
-      } else if (newStrategy.protocol === 'Lido') {
-        const lidoContract = new ethers.Contract(PROTOCOLS.LIDO.contract, LIDO_ABI, signer);
-        const tx = await lidoContract.submit(ethers.constants.AddressZero, {
-          value: balance.sub(gasCost),
-          gasLimit: newStrategy.gasEstimate
-        });
-        await tx.wait();
-      } else if (newStrategy.protocol === 'EigenLayer') {
-        const eigenContract = new ethers.Contract(PROTOCOLS.EIGEN.contract, EIGEN_ABI, signer);
-        const tx = await eigenContract.deposit({
-          value: balance.sub(gasCost),
-          gasLimit: newStrategy.gasEstimate
-        });
-        await tx.wait();
-      }
-
-      toast({
-        title: 'Rebalancing successful',
-        description: `Moved funds from ${currentStrategy.protocol} to ${newStrategy.protocol}`,
-        variant: 'default'
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Rebalancing error:', error);
-      toast({
-        title: 'Rebalancing failed',
-        description: error.message,
-        variant: 'destructive'
-      });
-      return false;
-    }
-  };
-
+interface StrategyRecommendation {
+  recommendedProtocol: 'Aave' | 'Lido' | 'EigenLayer' | 'None';
+  reasoning: string;
+  estimatedNetAPY: number;
+  confidenceScore: number;
+  warnings: string[];
+  alternativeProtocols?: { protocol: string; reasonNotRecommended: string }[];
+  strategyDetails: ProtocolYield | null; // Contains the full details if a protocol is recommended
+}
 
 export default function Home() {
+  // State Variables
   const [yields, setYields] = useState<ProtocolYield[]>([]);
   const [currentStrategy, setCurrentStrategy] = useState<ProtocolYield | null>(null);
-  const [isRebalancing, setIsRebalancing] = useState(false);
+  const [recommendedStrategy, setRecommendedStrategy] = useState<StrategyRecommendation | null>(null);
+  const [isExecuting, setIsExecuting] = useState(false); // Renamed from isRebalancing
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [gasPrice, setGasPrice] = useState<number>(0);
-  const [autoRebalance, setAutoRebalance] = useState(false);
+  const [gasPriceGwei, setGasPriceGwei] = useState<number>(0);
+  const [ethPriceUsd, setEthPriceUsd] = useState<number>(0);
+  const [autoRebalance, setAutoRebalance] = useState(false); // Keep UI, logic needs backend
   const [riskLevel, setRiskLevel] = useState(2); // 1-5 scale
+  const { user, ready, authenticated, login, getAccessToken } = usePrivy();
 
-  // Fetch protocol yields and gas prices
-  const fetchData = useCallback(async () => {
+  // Fetch initial data (Yields, Current Strategy, Gas, ETH Price)
+  const fetchInitialData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    if (!authenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please connect your wallet to view data",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const [newYields, newGasPrice] = await Promise.all([
-        fetchProtocolYields(),
-        provider.getGasPrice()
+      const token = await getAccessToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Could not get access token",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const [yieldsResponse, currentStrategyResponse] = await Promise.all([
+        fetch('/api/yield/protocols', {
+           headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch('/api/yield/current', {
+           headers: { 'Authorization': `Bearer ${token}` }
+        })
       ]);
 
-      setYields(newYields);
-      setGasPrice(newGasPrice.toNumber());
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  }, []);
-
-  // Initialize data fetching
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 300000); // Update every 5 minutes
-    return () => clearInterval(interval);
-  }, [fetchData]);
-
-  // Monitor for rebalancing opportunities
-  useEffect(() => {
-    if (!yields.length || !currentStrategy || isRebalancing || !autoRebalance) return;
-
-    const optimalStrategy = calculateOptimalStrategy(yields, riskLevel, gasPrice);
-    if (optimalStrategy && 
-        optimalStrategy.protocol !== currentStrategy.protocol && 
-        optimalStrategy.apy > currentStrategy.apy * 1.1) { // 10% improvement threshold
-      handleRebalance(optimalStrategy);
-    }
-  }, [yields, currentStrategy, riskLevel, gasPrice, isRebalancing, autoRebalance]);
-
-  const handleRebalance = async (newStrategy: ProtocolYield) => {
-    if (!currentStrategy || isRebalancing) return;
-
-    setIsRebalancing(true);
-    try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send('eth_requestAccounts', []); // Request wallet connection
-      const signer = provider.getSigner();
-      
-      const success = await rebalanceFunds(signer, currentStrategy, newStrategy);
-      if (success) {
-        setCurrentStrategy(newStrategy);
-        toast({
-          title: 'Strategy Updated',
-          description: `Successfully moved to ${newStrategy.protocol} for ${newStrategy.apy.toFixed(2)}% APY`,
-          variant: 'default'
-        });
+      // Process Yields
+      if (!yieldsResponse.ok) {
+        const errorData = await yieldsResponse.json();
+        throw new Error(errorData.message || `Failed to fetch yields: ${yieldsResponse.statusText}`);
       }
+      const yieldsData = await yieldsResponse.json();
+      setYields(yieldsData.yields || []);
+      setGasPriceGwei(yieldsData.gasPriceGwei || 0);
+      setEthPriceUsd(yieldsData.ethPriceUsd || 0);
+      setLastUpdate(new Date());
+
+      // Process Current Strategy
+       if (!currentStrategyResponse.ok) {
+        // Don't fail hard if current strategy isn't found (maybe user has none)
+        console.warn(`Failed to fetch current strategy: ${currentStrategyResponse.statusText}`);
+         const errorData = await currentStrategyResponse.json().catch(() => ({})); // Try to get error message
+         if (currentStrategyResponse.status !== 404) { // Allow 404 (no strategy found)
+             setError(errorData.message || "Failed to fetch current strategy");
+         }
+        setCurrentStrategy(null);
+      } else {
+          const strategyData = await currentStrategyResponse.json();
+          setCurrentStrategy(strategyData.currentStrategy); // API returns { currentStrategy: ProtocolYield | null }
+      }
+
     } catch (error) {
-      console.error('Rebalancing error:', error);
+      console.error('Error fetching initial data:', error);
+      setError(error.message || "An unknown error occurred while fetching data.");
       toast({
-        title: 'Rebalancing Failed',
-        description: 'Please check your wallet connection and try again',
+        title: "Error Fetching Data",
+        description: error.message || "Could not load initial data. Please refresh.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authenticated, getAccessToken]); // Add dependencies if needed, e.g., if auth token changes
+
+  // Fetch AI Recommendation
+  const fetchRecommendation = useCallback(async (currentRiskLevel: number) => {
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Could not get access token",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const response = await fetch('/api/yield/recommend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          riskLevel: currentRiskLevel,
+          investmentAmount: 10000, // Default $10k for now
+          timeHorizon: 12 // Default 12 months
+        }),
+      });
+
+      if (!response.ok) {
+         const errorData = await response.json();
+         throw new Error(errorData.message || `Failed to fetch recommendation: ${response.statusText}`);
+      }
+
+      const recommendationData: StrategyRecommendation = await response.json();
+      setRecommendedStrategy(recommendationData);
+
+    } catch (error) {
+      console.error('Error fetching recommendation:', error);
+      setError(error.message || "An unknown error occurred while fetching recommendation.");
+       toast({
+        title: "AI Recommendation Error",
+        description: error.message || "Could not get recommendation. Please try again.",
+        variant: "destructive"
+      });
+    }
+  }, [getAccessToken]);
+
+  // Initial Data Load and Recommendation Fetch
+  useEffect(() => {
+    if (ready) {
+      fetchInitialData().then(() => {
+        // Fetch initial recommendation after loading data
+        fetchRecommendation(riskLevel);
+      });
+      // Setup interval for refreshing yield data (not recommendations)
+      const interval = setInterval(fetchInitialData, 300000); // Update yields every 5 minutes
+      return () => clearInterval(interval);
+    }
+  }, [ready, fetchInitialData, riskLevel, fetchRecommendation, getAccessToken]); // Only depends on the fetch function itself initially
+
+   // Fetch new recommendation when risk level changes
+   useEffect(() => {
+      // Don't fetch on initial load if already handled above
+       if (!isLoading && ready) {
+            fetchRecommendation(riskLevel);
+       }
+   }, [riskLevel, fetchRecommendation, isLoading, ready, getAccessToken]);
+
+  const handleRetry = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await fetchInitialData();
+    } catch (err) {
+      setError('Failed to fetch data. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Execute Strategy via API
+  const handleExecuteStrategy = async (strategyToExecute: ProtocolYield) => {
+    if (!strategyToExecute || isExecuting) return;
+
+    setIsExecuting(true);
+    setError(null);
+    if (!authenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please connect your wallet to execute this strategy",
+        variant: "destructive"
+      });
+      login();
+      return;
+    }
+
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "Could not get access token",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const response = await fetch('/api/yield/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ newStrategy: strategyToExecute }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Execution failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      toast({
+        title: 'Execution Initiated',
+        description: result.message || `Successfully initiated move to ${strategyToExecute.protocol}.`,
+        variant: 'default'
+      });
+      // Fetch the updated state from the backend to be sure
+      const currentStrategyResponse = await fetch('/api/current-strategy', {
+         headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if(currentStrategyResponse.ok) {
+        const strategyData = await currentStrategyResponse.json();
+         setCurrentStrategy(strategyData.currentStrategy);
+      } else {
+        // Fallback: update state based on the strategy we intended to execute
+        setCurrentStrategy(strategyToExecute);
+        console.warn("Execution reported success, but failed to re-fetch current strategy state.");
+      }
+
+    } catch (error) {
+      console.error('Execution error:', error);
+      setError(error.message || "An unknown error occurred during execution.");
+      toast({
+        title: 'Execution Failed',
+        description: error.message || 'Please check console and try again.',
         variant: 'destructive'
       });
     } finally {
-      setIsRebalancing(false);
+      setIsExecuting(false);
     }
   };
 
+  // --- UI Helper Functions ---
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
 
   const toggleExpand = (id: string) => {
@@ -385,7 +294,7 @@ export default function Home() {
   };
 
   const getRiskLevelClass = (riskLevel: string) => {
-    switch (riskLevel.toLowerCase()) {
+     switch (riskLevel?.toLowerCase()) { // Added optional chaining
       case 'low':
         return 'bg-green-500/10 text-green-400';
       case 'medium':
@@ -397,500 +306,357 @@ export default function Home() {
     }
   };
 
-  const getProtocolStats = (protocol: ProtocolYield) => {
-    const annualizedReturn = protocol.apy - ((protocol.gasEstimate * gasPrice / 1e9) * 12);
+  // Calculate stats for display (can still be useful for the general list)
+  const getProtocolDisplayStats = (protocol: ProtocolYield) => {
+    const gasPriceWei = parseUnits(gasPriceGwei.toString(), 'gwei');
+    const gasEstimateWei = BigInt(protocol.gasEstimate);
+    const gasCostWei = gasPriceWei * gasEstimateWei;
+    const gasCostEth = formatUnits(gasCostWei, 'ether');
+    const gasCostUsd = parseFloat(gasCostEth) * ethPriceUsd;
+
     return {
-      apy: protocol.apy.toFixed(2),
-      annualizedReturn: annualizedReturn.toFixed(2),
-      tvl: (protocol.tvl / 1e9).toFixed(2),
-      risk: protocol.riskLevel,
-      gasEstimate: (protocol.gasEstimate * gasPrice / 1e18).toFixed(4)
+      gasCostUsd,
+      // Calculate net APY considering gas costs and rebalancing frequency
+      netApy: calculateNetApy(protocol, gasPriceGwei, ethPriceUsd)
     };
   };
 
+  // --- Render Logic ---
+  if (!ready) return <div>Loading Privy...</div>;
+
   return (
     <div className="min-h-screen bg-[#080812] text-white">
-         <Navbar />
+         <Navbar onSubscribe={function (): void {
+        throw new Error("Function not implemented.");
+      } } />
       <main className="container mx-auto px-4 py-8">
 
+        {/* Loading and Error Display */}
+        {isLoading && (
+            <div className="flex justify-center items-center my-6 p-4 bg-[#0d101f] border border-[#1e2134] rounded-lg">
+                <Loader2 className="h-6 w-6 animate-spin mr-3" />
+                <span>Loading initial protocol and strategy data...</span>
+            </div>
+        )}
+         {error && !isLoading && ( // Don't show error if actively loading
+            <div className="my-6 p-4 bg-red-900/30 border border-red-700 text-red-300 rounded-lg flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-400" />
+                <div>
+                    <p className="font-semibold">An error occurred:</p>
+                    <p className="text-sm">{error}</p>
+                </div>
+                <Button 
+                  onClick={handleRetry}
+                  disabled={isLoading}
+                  variant="outline"
+                  className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+                >
+                  {isLoading ? 'Retrying...' : 'Retry'}
+                </Button>
+            </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-          <Card className="border-[#1e2134] bg-[#0d101f]">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Scan className="h-5 w-5 text-white" />
-          Asset Scanner
-        </CardTitle>
-        <CardDescription className="text-gray-300">Your assets across supported DeFi protocols</CardDescription>
-      </CardHeader>
+            {/* Asset Scanner / Available Protocols */}
+             <Card className="border-[#1e2134] bg-[#0d101f]">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                    <Scan className="h-5 w-5 text-white" />
+                    Available Yield Opportunities (ETH)
+                    </CardTitle>
+                    <CardDescription className="text-gray-300">
+                        Browse available protocols. AI recommendations are below.
+                         {currentStrategy && ` Currently active strategy: ${currentStrategy.protocol}`}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                     {!isLoading && yields.length > 0 ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {yields.map((protocol) => {
+                            const stats = getProtocolDisplayStats(protocol);
+                            const isCurrent = currentStrategy?.protocol === protocol.protocol;
+                            return (
+                            <Card
+                                key={protocol.protocol}
+                                className={`border ${isCurrent ? 'border-blue-500 shadow-lg shadow-blue-500/10' : 'border-[#1e2134]'} bg-[#161a2c] overflow-hidden transition-all hover:border-gray-600`}
+                            >
+                                <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center justify-between text-lg">
+                                    <span>{protocol.protocol}</span>
+                                    {isCurrent && (
+                                    <span className="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">
+                                        Active Strategy
+                                    </span>
+                                    )}
+                                </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between items-center">
+                                    <span className="text-gray-400">APY (Gross)</span>
+                                    <span className="text-green-500 font-medium">{protocol.apy?.toFixed(2) ?? 'N/A'}%</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                    <span className="text-gray-400">TVL</span>
+                                    <span className="font-medium">${(protocol.tvl / 1e9).toFixed(2) ?? 'N/A'}B</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                    <span className="text-gray-400">Risk Level</span>
+                                    <span className={`px-2 py-0.5 rounded text-xs ${getRiskLevelClass(protocol.riskLevel)}`}>
+                                        {protocol.riskLevel}
+                                    </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                    <span className="text-gray-400 whitespace-nowrap">Est. Gas (ETH)</span>
+                                    <span className="font-medium text-xs">{stats.gasCostEth}</span>
+                                    </div>
+                                </div>
+                                <Button
+                                    className={`w-full mt-4 text-sm py-1.5 h-auto ${isCurrent ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                                    onClick={() => handleExecuteStrategy(protocol)}
+                                    disabled={isExecuting || isCurrent}
+                                    variant={isCurrent ? 'outline' : 'default'}
+                                >
+                                    {isExecuting ? (
+                                        <><Loader2 className="h-4 w-4 animate-spin"/>Working...</>
+                                     ) : isCurrent ? (
+                                        'Current Strategy'
+                                     ) : (
+                                        'Switch to This Strategy'
+                                    )}
+                                </Button>
+                                </CardContent>
+                            </Card>
+                            );
+                        })}
+                        </div>
+                     ) : !isLoading && yields.length === 0 ? (
+                         <p className="text-center text-gray-400 py-4">No yield protocols available or failed to load.</p>
+                     ) : null } {/* Show nothing while loading */}
 
-      <CardContent>
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid grid-cols-4 mb-4 bg-[#161a2c]">
-            <TabsTrigger value="all" className="data-[state=active]:bg-[#0d101f] data-[state=active]:text-[#3b82f6]">
-              All Assets
-            </TabsTrigger>
-            <TabsTrigger value="aave" className="data-[state=active]:bg-[#0d101f] data-[state=active]:text-[#3b82f6]">
-              Aave
-            </TabsTrigger>
-            <TabsTrigger value="lido" className="data-[state=active]:bg-[#0d101f] data-[state=active]:text-[#3b82f6]">
-              Lido
-            </TabsTrigger>
-            <TabsTrigger value="eigen" className="data-[state=active]:bg-[#0d101f] data-[state=active]:text-[#3b82f6]">
-              EigenLayer
-            </TabsTrigger>
-          </TabsList>
+                    {lastUpdate && !isLoading && (
+                        <div className="text-xs text-gray-500 mt-4 text-center">
+                            Data last updated: {lastUpdate.toLocaleTimeString()} | Gas: {gasPriceGwei.toFixed(1)} Gwei | ETH: ${ethPriceUsd.toFixed(0)}
+                        </div>
+                    )}
+                </CardContent>
+                </Card>
 
-          <TabsContent value="all" className="space-y-4">
-            <Card className="border-[#1e2134] bg-[#0d101f] mb-4">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-blue-500" />
-                    AI Yield Optimizer
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-sm text-gray-400">
-                      Auto-Rebalance: 
-                      <Button
-                        variant={autoRebalance ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setAutoRebalance(!autoRebalance)}
-                        className="ml-2"
-                      >
-                        {autoRebalance ? "On" : "Off"}
-                      </Button>
+
+            {/* AI-Powered Yield Strategies */}
+             <Card className="border-[#1e2134] bg-[#0d101f]">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-[#3b82f6]" />
+                    AI Strategy Recommendation
+                    </CardTitle>
+                    <CardDescription className="text-gray-300">
+                    Personalized recommendation based on your assets and risk preferences. Adjust risk below.
+                    </CardDescription>
+                </CardHeader>
+
+                <CardContent>
+                    {/* Risk Slider */}
+                    <div className="mb-6 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                            <h3 className="text-sm font-medium mb-1">Your Risk Preference</h3>
+                            </div>
+                            <div className="flex items-center gap-3 w-full sm:w-64">
+                            <Slider
+                                value={[riskLevel]}
+                                min={1}
+                                max={5}
+                                step={1}
+                                onValueChange={(value) => setRiskLevel(value[0])} // Triggers fetchRecommendation via useEffect
+                                className="w-full [&>span:first-child]:h-1 [&>span>span]:h-1 [&>span>span]:w-3 [&>span>span]:h-3 [&>span>span]:border-2]" // Basic styling adjustment
+                                disabled={isLoading}
+                            />
+                            <span className="text-sm font-medium min-w-[120px] text-right">{getRiskLabel(riskLevel)}</span>
+                            </div>
+                        </div>
+                         <div className="w-full h-1 bg-[#161a2c] rounded-full overflow-hidden">
+                            <div
+                            className="h-full bg-gradient-to-r from-[#10b981] via-[#3b82f6] to-[#f43f5e] transition-all duration-300"
+                            style={{ width: `${((riskLevel -1) / 4) * 100}%` }} // Adjusted for 1-5 scale
+                            ></div>
+                        </div>
                     </div>
-                    <div className="text-sm text-gray-400">
-                      Risk Level: {getRiskLabel(riskLevel)}
-                      <Slider
-                        value={[riskLevel]}
-                        min={1}
-                        max={5}
-                        step={1}
-                        onValueChange={(value) => setRiskLevel(value[0])}
-                        className="w-32 ml-2"
-                      />
-                    </div>
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  {yields.map((protocol) => {
-                    const stats = getProtocolStats(protocol);
-                    const isCurrentStrategy = currentStrategy?.protocol === protocol.protocol;
-                    return (
-                      <Card 
-                        key={protocol.protocol}
-                        className={`border ${isCurrentStrategy ? 'border-blue-500' : 'border-[#1e2134]'} bg-[#161a2c] overflow-hidden`}
-                      >
-                        <CardHeader className="pb-3">
-                          <CardTitle className="flex items-center justify-between text-lg">
-                            <span>{protocol.protocol}</span>
-                            {isCurrentStrategy && (
-                              <span className="text-sm text-blue-500 bg-blue-500/10 px-2 py-1 rounded">
-                                Current Strategy
-                              </span>
-                            )}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">APY</span>
-                              <span className="text-green-500 font-medium">{stats.apy}%</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400 whitespace-nowrap">Net Return (Annual)</span>
-                              <span className={`${Number(stats.annualizedReturn) > 0 ? 'text-green-500' : 'text-red-500'} font-medium`}>
-                                {stats.annualizedReturn}%
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">TVL</span>
-                              <span className="font-medium">${stats.tvl}B</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Risk Level</span>
-                              <span className={`px-2 py-0.5 rounded text-sm ${getRiskLevelClass(stats.risk)}`}>
-                                {stats.risk}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400 whitespace-nowrap">Gas Cost (ETH)</span>
-                              <span className="font-medium">{stats.gasEstimate}</span>
-                            </div>
-                          </div>
-                          <Button
-                            className={`w-full mt-4 ${isCurrentStrategy ? 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20' : ''}`}
-                            onClick={() => handleRebalance(protocol)}
-                            disabled={isRebalancing || isCurrentStrategy}
-                            variant={isCurrentStrategy ? 'outline' : 'default'}
-                          >
-                            {isRebalancing ? 'Rebalancing...' : 
-                             isCurrentStrategy ? 'Current Strategy' : 
-                             'Switch to This Strategy'}
-                          </Button>
-                          
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-                {lastUpdate && (
-                  <div className="text-sm text-gray-400 mt-4 text-center">
-                    Last updated: {lastUpdate.toLocaleTimeString()}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
-          <TabsContent value="aave" className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              {yields
-                .filter(protocol => protocol.protocol === 'Aave')
-                .map(protocol => {
-                  const stats = getProtocolStats(protocol);
-                  const isCurrentStrategy = currentStrategy?.protocol === protocol.protocol;
-                  return (
-                    <Card 
-                      key={protocol.protocol}
-                      className={`border ${isCurrentStrategy ? 'border-blue-500' : 'border-[#1e2134]'} bg-[#161a2c]`}
-                    >
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between text-lg">
-                          <div className="flex items-center gap-2">
-                            <span>{protocol.token}</span>
-                            <span className="text-sm text-gray-400">on {protocol.protocol}</span>
-                          </div>
-                          {isCurrentStrategy && (
-                            <span className="text-sm text-blue-500">Current Strategy</span>
-                          )}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">APY</span>
-                            <span className="text-green-500">{stats.apy}%</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Net Return (Annual)</span>
-                            <span className={Number(stats.annualizedReturn) > 0 ? 'text-green-500' : 'text-red-500'}>
-                              {stats.annualizedReturn}%
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">TVL</span>
-                            <span>${stats.tvl}B</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Gas Cost (ETH)</span>
-                            <span>{stats.gasEstimate}</span>
-                          </div>
-                        </div>
-                        {!isCurrentStrategy && (
-                          <Button
-                            className="w-full mt-4"
-                            onClick={() => handleRebalance(protocol)}
-                            disabled={isRebalancing}
-                          >
-                            {isRebalancing ? 'Rebalancing...' : 'Switch to This Strategy'}
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              }
-            </div>
-          </TabsContent>
+                     {/* Recommendation Display */}
+                     {recommendedStrategy && recommendedStrategy.recommendedProtocol !== 'None' && recommendedStrategy.strategyDetails && (
+                        <ActionCard
+                            id={`strategy-${recommendedStrategy.recommendedProtocol}`} // Dynamic ID
+                            icon={<Zap className="h-5 w-5" />} // Use a default icon or map based on protocol
+                            iconColor="#3b82f6"
+                            title={`AI Recommended: ${recommendedStrategy.recommendedProtocol}`}
+                            description={recommendedStrategy.reasoning}
+                            actionText={`Execute ${recommendedStrategy.recommendedProtocol} Strategy`}
+                            metricLabel={`~${recommendedStrategy.estimatedNetAPY.toFixed(2)}% Net APY`}
+                            metricValue={`Confidence: ${recommendedStrategy.confidenceScore}/100`}
+                            assets={[ // Reconstruct from strategyDetails
+                                { name: recommendedStrategy.strategyDetails.token, // Or map based on protocol if needed
+                                  protocol: recommendedStrategy.strategyDetails.protocol,
+                                  allocation: 100 // Assuming single protocol recommendation for now
+                                }
+                            ]}
+                            isExecuting={isExecuting}
+                            onExecute={() => handleExecuteStrategy(recommendedStrategy.strategyDetails!)} // Pass the details object
+                           // yields={yields} // Pass yields if needed by ActionCard internal logic, otherwise remove
+                           warnings={recommendedStrategy.warnings} // Pass warnings
+                        />
+                    )}
 
-          <TabsContent value="lido" className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              {yields
-                .filter(protocol => protocol.protocol === 'Lido')
-                .map(protocol => {
-                  const stats = getProtocolStats(protocol);
-                  const isCurrentStrategy = currentStrategy?.protocol === protocol.protocol;
-                  return (
-                    <Card 
-                      key={protocol.protocol}
-                      className={`border ${isCurrentStrategy ? 'border-blue-500' : 'border-[#1e2134]'} bg-[#161a2c]`}
-                    >
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between text-lg">
-                          <div className="flex items-center gap-2">
-                            <span>{protocol.token}</span>
-                            <span className="text-sm text-gray-400">on {protocol.protocol}</span>
-                          </div>
-                          {isCurrentStrategy && (
-                            <span className="text-sm text-blue-500">Current Strategy</span>
-                          )}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">APY</span>
-                            <span className="text-green-500">{stats.apy}%</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Net Return (Annual)</span>
-                            <span className={Number(stats.annualizedReturn) > 0 ? 'text-green-500' : 'text-red-500'}>
-                              {stats.annualizedReturn}%
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">TVL</span>
-                            <span>${stats.tvl}B</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Gas Cost (ETH)</span>
-                            <span>{stats.gasEstimate}</span>
-                          </div>
-                        </div>
-                        {!isCurrentStrategy && (
-                          <Button
-                            className="w-full mt-4"
-                            onClick={() => handleRebalance(protocol)}
-                            disabled={isRebalancing}
-                          >
-                            {isRebalancing ? 'Rebalancing...' : 'Switch to This Strategy'}
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              }
-            </div>
-          </TabsContent>
+                    {recommendedStrategy && recommendedStrategy.recommendedProtocol === 'None' && (
+                         <div className="text-center text-gray-400 border border-dashed border-gray-600 p-6 rounded-lg bg-[#111526]">
+                            <Zap className="h-8 w-8 mx-auto mb-3 text-gray-500" />
+                            <h4 className="font-semibold mb-1">No Optimal Strategy Found</h4>
+                            <p className="text-sm">{recommendedStrategy.reasoning || "Based on your current risk level and market conditions, the AI doesn't recommend deploying funds right now (e.g., gas costs too high, no suitable risk/reward). Try adjusting your risk level."}</p>
+                         </div>
+                    )}
 
-          <TabsContent value="eigen" className="space-y-4">
-            <div className="grid grid-cols-1 gap-4">
-              {yields
-                .filter(protocol => protocol.protocol === 'EigenLayer')
-                .map(protocol => {
-                  const stats = getProtocolStats(protocol);
-                  const isCurrentStrategy = currentStrategy?.protocol === protocol.protocol;
-                  return (
-                    <Card 
-                      key={protocol.protocol}
-                      className={`border ${isCurrentStrategy ? 'border-blue-500' : 'border-[#1e2134]'} bg-[#161a2c]`}
-                    >
-                      <CardHeader>
-                        <CardTitle className="flex items-center justify-between text-lg">
-                          <div className="flex items-center gap-2">
-                            <span>{protocol.token}</span>
-                            <span className="text-sm text-gray-400">on {protocol.protocol}</span>
-                          </div>
-                          {isCurrentStrategy && (
-                            <span className="text-sm text-blue-500">Current Strategy</span>
-                          )}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">APY</span>
-                            <span className="text-green-500">{stats.apy}%</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Net Return (Annual)</span>
-                            <span className={Number(stats.annualizedReturn) > 0 ? 'text-green-500' : 'text-red-500'}>
-                              {stats.annualizedReturn}%
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">TVL</span>
-                            <span>${stats.tvl}B</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Gas Cost (ETH)</span>
-                            <span>{stats.gasEstimate}</span>
-                          </div>
-                        </div>
-                        {!isCurrentStrategy && (
-                          <Button
-                            className="w-full mt-4"
-                            onClick={() => handleRebalance(protocol)}
-                            disabled={isRebalancing}
-                          >
-                            {isRebalancing ? 'Rebalancing...' : 'Switch to This Strategy'}
-                          </Button>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })
-              }
-            </div>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
-            {/* <YieldStrategies /> */}
+                    {!recommendedStrategy && !error && (
+                         <p className="text-center text-gray-500 py-4">Adjust risk slider to get AI recommendation.</p>
+                    )}
+                     {error && ( // Show specific recommendation error here if needed
+                        <p className="text-center text-red-400 py-4">Could not load AI recommendation.</p>
+                    )}
 
-            <Card className="border-[#1e2134] bg-[#0d101f]">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-[#3b82f6]" />
-          AI-Powered Yield Strategies
-        </CardTitle>
-        <CardDescription className="text-gray-300">
-          Personalized recommendations based on your assets and risk preferences
-          {yields.length > 0 ? (
-            <div className="mt-2">
-              <div className="text-sm text-gray-400">Available Protocols:</div>
-              <ul className="mt-1 space-y-1">
-                {yields.map((protocol) => (
-                  <li key={protocol.protocol} className="flex justify-between text-sm">
-                    <span>{protocol.protocol}</span>
-                    <span className="text-green-500">{protocol.apy.toFixed(2)}% APY</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : (
-            <div className="text-sm text-gray-400 mt-2">Loading protocol data...</div>
-          )}
-        </CardDescription>
-      </CardHeader>
 
-      <CardContent>
-        <div className="mb-6 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-medium mb-1">Risk Preference</h3>
-              <p className="text-xs text-gray-300">
-                Adjust your risk tolerance to see different strategy recommendations
-              </p>
-            </div>
-            <div className="flex items-center gap-3 w-full sm:w-64">
-              <Slider
-                value={[riskLevel]}
-                min={1}
-                max={5}
-                step={1}
-                onValueChange={(value) => setRiskLevel(value[0])}
-                className="w-full"
-              />
-              <span className="text-sm font-medium min-w-24 text-right">{getRiskLabel(riskLevel)}</span>
-            </div>
-          </div>
-
-          <div className="w-full h-2 bg-[#161a2c] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#10b981] via-[#3b82f6] to-[#f43f5e]"
-              style={{ width: `${(riskLevel / 5) * 100}%` }}
-            ></div>
-          </div>
-        </div>
-
-        <Tabs defaultValue="recommended" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-4 bg-[#161a2c]">
-            <TabsTrigger
-              value="recommended"
-              className="data-[state=active]:bg-[#0d101f] data-[state=active]:text-[#3b82f6]"
-            >
-              Recommended
-            </TabsTrigger>
-            <TabsTrigger
-              value="highest-yield"
-              className="data-[state=active]:bg-[#0d101f] data-[state=active]:text-[#3b82f6]"
-            >
-              Highest Yield
-            </TabsTrigger>
-            <TabsTrigger
-              value="lowest-risk"
-              className="data-[state=active]:bg-[#0d101f] data-[state=active]:text-[#3b82f6]"
-            >
-              Lowest Risk
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="recommended" className="space-y-4">
-            <ActionCard
-              id="strategy-1"
-              icon={<Wallet className="h-5 w-5" />}
-              iconColor="#3b82f6"
-              title="Balanced ETH Yield Strategy"
-              description="Optimize your ETH holdings across Lido and EigenLayer for balanced returns"
-              actionText="Stake ETH"
-              metricLabel="~4.2% APR"
-              metricValue="Est. $420/year"
-              assets={[
-                { name: "ETH", protocol: "Lido", allocation: 70 },
-                { name: "ETH", protocol: "EigenLayer", allocation: 30 },
-              ]}
-              isExecuting={isRebalancing}
-              onExecute={handleRebalance}
-              yields={yields}
-            />
-
-            <ActionCard
-              id="strategy-2"
-              icon={<ShieldCheck className="h-5 w-5" />}
-              iconColor="#b980fa"
-              title="Stablecoin Yield Maximizer"
-              description="Optimize your USDC holdings on Aave with strategic position management"
-              actionText="Optimize USDC"
-              metricLabel="~2.8% APR"
-              metricValue="Est. $146/year"
-              assets={[{ name: "USDC", protocol: "Aave", allocation: 100 }]}
-              isExecuting={isRebalancing}
-              onExecute={handleRebalance}
-              yields={yields}
-            />
-          </TabsContent>
-
-          <TabsContent value="highest-yield" className="space-y-4">
-            <ActionCard
-              id="strategy-3"
-              icon={<Zap className="h-5 w-5" />}
-              iconColor="#3b82f6"
-              title="ETH Yield Maximizer"
-              description="Maximize ETH yield through strategic allocation across multiple protocols"
-              actionText="Maximize Yield"
-              metricLabel="~5.1% APR"
-              metricValue="Est. $510/year"
-              assets={[
-                { name: "ETH", protocol: "Lido", allocation: 50 },
-                { name: "ETH", protocol: "EigenLayer", allocation: 50 },
-              ]}
-              isExecuting={isRebalancing}
-              onExecute={handleRebalance}
-              yields={yields}
-            />
-          </TabsContent>
-
-          <TabsContent value="lowest-risk" className="space-y-4">
-            <ActionCard
-              id="strategy-4"
-              icon={<ShieldIcon className="h-5 w-5" />}
-              iconColor="#10b981"
-              title="Ultra-Safe Stablecoin Strategy"
-              description="Maximize safety with minimal risk exposure for your stablecoin holdings"
-              actionText="Secure USDC"
-              metricLabel="~2.3% APR"
-              metricValue="Est. $120/year"
-              assets={[{ name: "USDC", protocol: "Aave", allocation: 100 }]}
-              isExecuting={isRebalancing}
-              onExecute={handleRebalance}
-              yields={yields}
-            />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+                </CardContent>
+                </Card>
 
           </div>
           <div className="space-y-6">
-            {/* {/* <PerformanceMonitor /> */}
-            <Card className="border-[#1e2134] bg-[#0d101f]">
+            {/* Performance Monitor & Alerts Panel (Keep as is, data is static/simulated) */}
+            <PerformanceMonitor />
+            <AlertsPanel />
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+
+// --- Child Components (Modified ActionCard, others kept as is) ---
+
+interface ActionCardProps {
+    id: string
+    icon: React.ReactNode
+    iconColor: string
+    title: string
+    description: string
+    actionText: string
+    metricLabel: string
+    metricValue: string // Changed to string to accommodate confidence score etc.
+    assets: { name: string; protocol: string; allocation: number }[]
+    isExecuting: boolean
+    onExecute: () => void // Simplified from original, takes no args now
+    // yields: ProtocolYield[] // Removed, not needed if execution logic is external
+    warnings?: string[] // Added warnings prop
+}
+
+function ActionCard({
+    id,
+    icon,
+    iconColor,
+    title,
+    description,
+    actionText,
+    metricLabel,
+    metricValue,
+    assets,
+    isExecuting,
+    onExecute,
+    warnings
+  }: ActionCardProps) {
+    const getProtocolColor = (protocol: string) => {
+       switch (protocol) {
+        case "Aave": return "text-[#b980fa]";
+        case "Lido": return "text-[#3b82f6]";
+        case "EigenLayer": return "text-[#06b6d4]";
+        default: return "text-gray-400";
+      }
+    }
+
+    const currentStrategy = assets[0]; // Assuming single asset/protocol per recommendation card for now
+
+    return (
+      <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-4">
+        <div className="flex flex-col sm:flex-row items-start gap-4">
+          {/* Icon */}
+          <div
+            className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center mt-1"
+            style={{ backgroundColor: `${iconColor}20` }}
+          >
+            <div style={{ color: iconColor }}>{icon}</div>
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-grow">
+            <h3 className="text-lg font-medium mb-1">{title}</h3>
+            <p className="text-gray-300 text-sm mb-3">{description}</p>
+
+            {/* Asset Breakdown (simplified for single recommendation) */}
+             <div className="space-y-1 mb-4 text-sm">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-gray-300">
+                        <span>Asset: {currentStrategy.name}</span>
+                        <span className={`${getProtocolColor(currentStrategy.protocol)}`}>
+                            ({currentStrategy.protocol})
+                        </span>
+                    </div>
+                    {/* <span>{currentStrategy.allocation}% Allocation</span> */}
+                </div>
+            </div>
+
+            {/* Warnings */}
+            {warnings && warnings.length > 0 && (
+                <div className="mb-4 p-3 border border-yellow-700 bg-yellow-900/30 rounded-md text-yellow-300 text-xs space-y-1">
+                    <p className="font-medium flex items-center gap-1.5"><AlertTriangle className="h-3.5 w-3.5 inline-block" /> Risks:</p>
+                    <ul className="list-disc list-inside pl-1">
+                        {warnings.map((warning, idx) => (
+                            <li key={idx}>{warning}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            <Button
+              className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white"
+              onClick={onExecute} // Calls the passed function directly
+              disabled={isExecuting}
+            >
+              {isExecuting ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Executing...
+                </div>
+              ) : (
+                actionText
+              )}
+            </Button>
+          </div>
+
+          {/* Metrics */}
+          <div className="flex-shrink-0 text-right space-y-1 mt-1 w-full sm:w-auto">
+            <p className="text-[#10b981] font-medium text-base sm:text-lg">{metricLabel}</p>
+            <p className="text-gray-400 text-xs">{metricValue}</p>
+          </div>
+        </div>
+      </div>
+    )
+}
+
+
+// --- Placeholder Components (Keep your existing implementations) ---
+
+function PerformanceMonitor() {
+  // Keep your existing PerformanceMonitor component code here
+   // (Using the static/simulated chart from your original code)
+    return (
+     <Card className="border-[#1e2134] bg-[#0d101f]">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <LineChart className="h-5 w-5 text-[#3b82f6]" />
@@ -898,9 +664,9 @@ export default function Home() {
         </CardTitle>
         <CardDescription className="text-gray-300">Track your yield performance over time</CardDescription>
       </CardHeader>
-
       <CardContent>
-        <Tabs defaultValue="yield" className="w-full">
+        {/* ... Keep the existing Tabs and Chart simulation ... */}
+         <Tabs defaultValue="yield" className="w-full">
           <TabsList className="grid grid-cols-2 mb-4 bg-[#161a2c]">
             <TabsTrigger value="yield" className="data-[state=active]:bg-[#0d101f] data-[state=active]:text-[#3b82f6]">
               Yield
@@ -909,118 +675,83 @@ export default function Home() {
               Assets
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="yield">
+           <TabsContent value="yield">
             <div className="space-y-4">
-              <div className="h-48 w-full relative">
-                <div className="absolute inset-0 flex items-end">
-                  <div className="w-full h-full flex items-end">
-                    {/* Simulated chart with gradient bars */}
-                    <div className="flex-1 h-[30%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div>
-                    <div className="flex-1 h-[45%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div>
-                    <div className="flex-1 h-[40%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div>
-                    <div className="flex-1 h-[60%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div>
-                    <div className="flex-1 h-[75%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div>
-                    <div className="flex-1 h-[65%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div>
-                    <div className="flex-1 h-[80%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div>
-                  </div>
-                </div>
-
-                {/* Chart overlay with grid lines */}
-                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
-                  <div className="border-b border-[#1e2134] h-1/4"></div>
-                  <div className="border-b border-[#1e2134] h-1/4"></div>
-                  <div className="border-b border-[#1e2134] h-1/4"></div>
-                  <div className="border-b border-[#1e2134] h-1/4"></div>
-                </div>
-
-                {/* Y-axis labels */}
-                <div className="absolute left-0 inset-y-0 flex flex-col justify-between items-start text-xs text-gray-400 pointer-events-none">
-                  <span>5%</span>
-                  <span>4%</span>
-                  <span>3%</span>
-                  <span>2%</span>
-                  <span>1%</span>
-                </div>
-
-                {/* X-axis labels */}
-                <div className="absolute bottom-0 inset-x-0 flex justify-between text-xs text-gray-400 pt-2 pointer-events-none">
-                  <span>Jan</span>
-                  <span>Feb</span>
-                  <span>Mar</span>
-                  <span>Apr</span>
-                  <span>May</span>
-                  <span>Jun</span>
-                  <span>Jul</span>
-                </div>
+              <div className="h-48 w-full relative"> {/* Chart Simulation */}
+                 <div className="absolute inset-0 flex items-end"> <div className="w-full h-full flex items-end"> <div className="flex-1 h-[30%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div> <div className="flex-1 h-[45%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div> <div className="flex-1 h-[40%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div> <div className="flex-1 h-[60%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div> <div className="flex-1 h-[75%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div> <div className="flex-1 h-[65%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div> <div className="flex-1 h-[80%] bg-gradient-to-t from-[#3b82f6] to-transparent rounded-sm"></div> </div> </div>
+                 <div className="absolute inset-0 flex flex-col justify-between pointer-events-none"> <div className="border-b border-[#1e2134] h-1/4"></div> <div className="border-b border-[#1e2134] h-1/4"></div> <div className="border-b border-[#1e2134] h-1/4"></div> <div className="border-b border-[#1e2134] h-1/4"></div> </div>
+                 <div className="absolute left-0 inset-y-0 flex flex-col justify-between items-start text-xs text-gray-400 pointer-events-none"> <span>5%</span> <span>4%</span> <span>3%</span> <span>2%</span> <span>1%</span> </div>
+                 <div className="absolute bottom-0 inset-x-0 flex justify-between text-xs text-gray-400 pt-2 pointer-events-none"> <span>Jan</span> <span>Feb</span> <span>Mar</span> <span>Apr</span> <span>May</span> <span>Jun</span> <span>Jul</span> </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-3">
-                  <p className="text-xs text-gray-300 mb-1">Current Yield</p>
-                  <p className="text-xl font-medium text-[#10b981]">3.8%</p>
-                </div>
-                <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-3">
-                  <p className="text-xs text-gray-300 mb-1">30d Change</p>
-                  <p className="text-xl font-medium text-[#10b981]">+0.6%</p>
-                </div>
+                <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-3"> <p className="text-xs text-gray-300 mb-1">Current Yield</p> <p className="text-xl font-medium text-[#10b981]">3.8%</p> </div>
+                <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-3"> <p className="text-xs text-gray-300 mb-1">30d Change</p> <p className="text-xl font-medium text-[#10b981]">+0.6%</p> </div>
               </div>
             </div>
           </TabsContent>
-
-          <TabsContent value="assets">
-            <div className="space-y-4">
+          {/* ... Keep other tabs content ... */}
+           <TabsContent value="assets">
+             {/* Keep your asset chart simulation */}
+              <div className="space-y-4">
               <div className="h-48 w-full relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  {/* Simulated donut chart */}
-                  <div className="w-32 h-32 rounded-full border-8 border-[#3b82f6] relative">
-                    <div className="absolute inset-0 border-8 border-t-[#b980fa] border-r-[#b980fa] border-b-transparent border-l-transparent rounded-full transform rotate-45"></div>
-                    <div className="absolute inset-0 border-8 border-t-transparent border-r-transparent border-b-[#06b6d4] border-l-[#06b6d4] rounded-full transform -rotate-45"></div>
-                  </div>
+                <div className="absolute inset-0 flex items-center justify-center"> {/* Donut Chart Simulation */}
+                  <div className="w-32 h-32 rounded-full border-8 border-[#3b82f6] relative"> <div className="absolute inset-0 border-8 border-t-[#b980fa] border-r-[#b980fa] border-b-transparent border-l-transparent rounded-full transform rotate-45"></div> <div className="absolute inset-0 border-8 border-t-transparent border-r-transparent border-b-[#06b6d4] border-l-[#06b6d4] rounded-full transform -rotate-45"></div> </div>
                 </div>
-
-                {/* Legend */}
-                <div className="absolute bottom-0 inset-x-0 flex justify-center gap-4 text-xs">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-[#3b82f6] rounded-full"></div>
-                    <span className="text-gray-300">ETH (45%)</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-[#b980fa] rounded-full"></div>
-                    <span className="text-gray-300">USDC (35%)</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-[#06b6d4] rounded-full"></div>
-                    <span className="text-gray-300">WBTC (20%)</span>
-                  </div>
+                <div className="absolute bottom-0 inset-x-0 flex justify-center gap-4 text-xs"> {/* Legend */}
+                  <div className="flex items-center gap-1"> <div className="w-3 h-3 bg-[#3b82f6] rounded-full"></div> <span className="text-gray-300">ETH (45%)</span> </div>
+                  <div className="flex items-center gap-1"> <div className="w-3 h-3 bg-[#b980fa] rounded-full"></div> <span className="text-gray-300">USDC (35%)</span> </div>
+                  <div className="flex items-center gap-1"> <div className="w-3 h-3 bg-[#06b6d4] rounded-full"></div> <span className="text-gray-300">WBTC (20%)</span> </div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-3">
-                  <p className="text-xs text-gray-300 mb-1">Total Value</p>
-                  <p className="text-xl font-medium">$18,750</p>
-                </div>
-                <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-3">
-                  <p className="text-xs text-gray-300 mb-1">30d Change</p>
-                  <p className="text-xl font-medium text-[#10b981]">+12.4%</p>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
+              <div className="grid grid-cols-2 gap-4"> {/* Asset Stats */}
+                 <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-3"> <p className="text-xs text-gray-300 mb-1">Total Value</p> <p className="text-xl font-medium">$18,750</p> </div>
+                 <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-3"> <p className="text-xs text-gray-300 mb-1">30d Change</p> <p className="text-xl font-medium text-[#10b981]">+12.4%</p> </div>
+               </div>
+             </div>
+           </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
-
-            
-            {/* <AlertsPanel />  */}
-          </div>
-        </div>
-      </main>
-    </div>
-  )
+    );
 }
 
+function AlertsPanel() {
+  // Keep your existing AlertsPanel component code here
+  // (Likely static or simulated for now)
+  return (
+    <Card className="border-[#1e2134] bg-[#0d101f]">
+       <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-yellow-500" />
+          Alerts & Notifications
+        </CardTitle>
+        <CardDescription className="text-gray-300">Important updates about your portfolio</CardDescription>
+      </CardHeader>
+       <CardContent className="space-y-3">
+         <div className="flex items-start gap-3 p-3 bg-[#111526] border border-[#1e2134] rounded-lg">
+             <Zap className="h-4 w-4 text-blue-500 mt-1 flex-shrink-0"/>
+             <p className="text-xs text-gray-300">AI Recommendation: Consider shifting portion of ETH from Lido to EigenLayer for potential higher yield (Risk: Medium).</p>
+         </div>
+         <div className="flex items-start gap-3 p-3 bg-[#111526] border border-[#1e2134] rounded-lg">
+             <CheckCircle2 className="h-4 w-4 text-green-500 mt-1 flex-shrink-0"/>
+             <p className="text-xs text-gray-300">Successfully staked 0.5 ETH to Lido.</p>
+         </div>
+         <div className="flex items-start gap-3 p-3 bg-[#111526] border border-[#1e2134] rounded-lg">
+            <AlertTriangle className="h-4 w-4 text-yellow-500 mt-1 flex-shrink-0"/>
+             <p className="text-xs text-gray-300">High gas fee warning: Current gas price is above 60 Gwei.</p>
+         </div>
+       </CardContent>
+    </Card>
+  );
+}
+
+// Keep AssetCard if used elsewhere, or remove if not needed
+// function AssetCard(...) { ... }
+
+// Keep utility SVG components (Wallet, ShieldIcon, ShieldCheck) if used by static parts
+// function Wallet(...) { ... }
+// function ShieldIcon(...) { ... }
+// function ShieldCheck(...) { ... }
 
 
 interface AssetCardProps {
@@ -1153,93 +884,7 @@ interface ActionCardProps {
     yields: ProtocolYield[]
   }
   
-  function ActionCard({
-    id,
-    icon,
-    iconColor,
-    title,
-    description,
-    actionText,
-    metricLabel,
-    metricValue,
-    assets,
-    isExecuting,
-    onExecute,
-    yields,
-  }: ActionCardProps) {
-    const getProtocolColor = (protocol: string) => {
-      switch (protocol) {
-        case "Aave":
-          return "text-[#b980fa]"
-        case "Lido":
-          return "text-[#3b82f6]"
-        case "EigenLayer":
-          return "text-[#06b6d4]"
-        default:
-          return "text-gray-400"
-      }
-    }
-  
-    const buttonText = isExecuting ? 'Executing...' : 'Execute Strategy'
-  
-    return (
-      <div className="rounded-lg border border-[#1e2134] bg-[#111526] p-4">
-        <div className="flex items-start gap-4">
-          <div
-            className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
-            style={{ backgroundColor: `${iconColor}20` }}
-          >
-            <div style={{ color: iconColor }}>{icon}</div>
-          </div>
-  
-          <div className="flex-grow">
-            <h3 className="text-lg font-medium mb-1">{title}</h3>
-            <p className="text-gray-300 text-sm mb-3">{description}</p>
-  
-            <div className="space-y-1 mb-4">
-              {assets.map((asset, index) => (
-                <div key={index} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <span>{asset.name}</span>
-                    <span className={`text-xs ${getProtocolColor(asset.protocol)}`}>({asset.protocol})</span>
-                  </div>
-                  <span>{asset.allocation}%</span>
-                </div>
-              ))}
-            </div>
-  
-            <Button
-              className="w-full bg-[#3b82f6] hover:bg-[#2563eb] text-white"
-              onClick={() => {
-                // Find the protocol with highest allocation
-                const primaryAsset = assets.reduce((prev, current) => 
-                  prev.allocation > current.allocation ? prev : current
-                );
-                const strategy = yields.find(y => 
-                  y.protocol === primaryAsset.protocol && 
-                  y.token === primaryAsset.name
-                );
-                if (strategy) onExecute(strategy);
-              }}
-              disabled={isExecuting}
-            >
-              {isExecuting ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full border-2 border-t-white border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-                  Rebalancing...
-                </div>
-              ) : actionText}
-            </Button>
-          </div>
-  
-          <div className="flex-shrink-0 text-right">
-            <p className="text-[#10b981] font-medium">{metricLabel}</p>
-            <p className="text-gray-300 text-xs">{metricValue}</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+
   
   function Wallet(props: React.SVGProps<SVGSVGElement>) {
     return (

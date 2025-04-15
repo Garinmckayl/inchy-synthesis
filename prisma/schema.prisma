@@ -60,6 +60,7 @@ model User {
   stripeCustomerId String?    @unique
   isActive         Boolean    @default(false)
   wallets          WalletAnalysis[]
+  strategies       UserStrategy[]
 }
 
 model Customer {
@@ -100,6 +101,18 @@ model Message {
   content   Json
   createdAt DateTime @default(now())
   chat      Chat     @relation("ChatMessages", fields: [chatId], references: [id], onDelete: Cascade) // Correct relation definition
+}
+
+model UserStrategy {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  protocol  String
+  asset     String
+  apy       Float
+  riskLevel String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model WalletAnalysis {
