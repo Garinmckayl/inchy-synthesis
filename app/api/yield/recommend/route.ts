@@ -20,7 +20,7 @@ const recommendRequestSchema = z.object({
 });
 
 const strategyRecommendationSchema = z.object({
-    recommendedProtocol: z.enum(['Aave', 'Lido', 'EigenLayer', 'None'])
+    recommendedProtocol: z.enum(['Aave', 'Lido', 'EigenLayer', 'Curve Finance', 'Compound', 'None'])
         .describe("The single best protocol recommended for yielding ETH based on input criteria."),
     reasoning: z.string()
         .describe("Detailed explanation for the recommendation, considering APY, risk, TVL, gas costs (net APY), user's risk preference, AND insights from any tools used (web search, wallet analysis)."),

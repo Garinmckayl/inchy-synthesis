@@ -26,7 +26,7 @@ interface RecommendationResponse {
 }
 
 interface StrategyRecommendation {
-  recommendedProtocol: 'Aave' | 'Lido' | 'EigenLayer' | 'None';
+  recommendedProtocol: 'Aave' | 'Lido' | 'EigenLayer' | 'Curve Finance' | 'Compound' | 'None';
   reasoning: string;
   estimatedNetAPY: number;
   confidenceScore: number;

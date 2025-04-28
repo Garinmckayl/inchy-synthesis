@@ -15,6 +15,9 @@ const LIDO_API_URL = 'https://eth-api.lido.fi/v1/protocol/steth/apr/sma';
 const EXPAND_API_URL_POOL = 'https://api.expand.network/lendborrow/getpool';
 const EXPAND_API_URL_STATS = 'https://api.expand.network/pools/getstats';
 const DUNE_API_URL = 'https://api.dune.com/api/v1/eigenlayer/avs-stats';
+const CURVE_API_URL = 'https://api.curve.fi/api/getPools/ethereum/main';
+const COMPOUND_API_URL = 'https://api.compound.finance/api/v2/ctoken';
+const DEFILLAMA_API_URL = 'https://yields.llama.fi/pools';
 
 const WETH_ADDRESS = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
 
@@ -206,6 +209,145 @@ export async function fetchProtocolYields(): Promise<{ yields: ProtocolYield[], 
        console.log("Using fallback EigenLayer data due to error.");
     }
 
+    // --- Fetch Curve Finance Data ---
+    try {
+      console.log("Fetching Curve Finance data from:", CURVE_API_URL);
+      const curveResponse = await fetch(CURVE_API_URL, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        }
+      });
+
+      if (!curveResponse.ok) {
+        const errorText = await curveResponse.text();
+        console.error("Curve API error response:", errorText);
+        throw new Error(`Curve API error: ${curveResponse.statusText}`);
+      }
+
+      const curveData = await curveResponse.json();
+      // Find the ETH/stETH pool (one of the most popular Curve pools)
+      const ethStethPool = curveData?.data?.poolData?.find(
+        (pool: any) => pool.address.toLowerCase() === '0xdc24316b9ae028f1497c275eb9192a3ea0f67022'
+      );
+
+      if (ethStethPool) {
+        const apy = parseFloat(ethStethPool.apy) || 0;
+        yields.push({
+          protocol: 'Curve Finance',
+          apy: apy,
+          tvl: ethStethPool.usdTotal || 500_000_000, // Use actual TVL from API or fallback
+          riskLevel: 'Low',
+          token: 'ETH/stETH',
+          gasEstimate: 350000,
+        });
+        console.log("Added Curve Finance yield data.");
+      } else {
+        // Fallback if specific pool not found
+        console.log("ETH/stETH pool not found in Curve API response, using fallback data.");
+        yields.push({
+          protocol: 'Curve Finance',
+          apy: 3.5, // Conservative estimate
+          tvl: 500_000_000, // Approximate TVL for the ETH/stETH pool
+          riskLevel: 'Low',
+          token: 'ETH/stETH',
+          gasEstimate: 350000,
+        });
+        console.log("Using fallback Curve Finance data.");
+      }
+    } catch (error) {
+      console.error('Error fetching Curve Finance data:', error);
+      // Add fallback data if API fails
+      yields.push({
+        protocol: 'Curve Finance',
+        apy: 3.5,
+        tvl: 500_000_000,
+        riskLevel: 'Low',
+        token: 'ETH/stETH',
+        gasEstimate: 350000,
+      });
+      console.log("Using fallback Curve Finance data due to error.");
+    }
+
+    // --- Fetch Compound Finance Data ---
+    // Note: Compound V2 API was shut down on April 15, 2023
+    // Using DeFiLlama as an alternative source for Compound data
+    try {
+      console.log("Fetching Compound Finance data from DeFiLlama:", DEFILLAMA_API_URL);
+      const defiLlamaResponse = await fetch(DEFILLAMA_API_URL, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        }
+      });
+
+      if (!defiLlamaResponse.ok) {
+        const errorText = await defiLlamaResponse.text();
+        console.error("DeFiLlama API error response:", errorText);
+        throw new Error(`DeFiLlama API error: ${defiLlamaResponse.statusText}`);
+      }
+
+      const defiLlamaData = await defiLlamaResponse.json();
+      // Find Compound ETH/cETH pool
+      const compoundEthPool = defiLlamaData.data?.find(
+        (pool: any) => 
+          pool.project === 'compound-v3' && 
+          pool.chain === 'Ethereum' && 
+          pool.symbol.includes('ETH')
+      );
+      
+      if (compoundEthPool) {
+        yields.push({
+          protocol: 'Compound',
+          apy: parseFloat(compoundEthPool.apy) || 2.8,
+          tvl: parseFloat(compoundEthPool.tvlUsd) || 300_000_000,
+          riskLevel: 'Low',
+          token: 'ETH',
+          gasEstimate: 200000,
+        });
+        console.log("Added Compound Finance yield data from DeFiLlama.");
+      } else {
+        // Try to find any Compound pool if ETH-specific one isn't available
+        const anyCompoundPool = defiLlamaData.data?.find(
+          (pool: any) => pool.project === 'compound-v3' && pool.chain === 'Ethereum'
+        );
+        
+        if (anyCompoundPool) {
+          yields.push({
+            protocol: 'Compound',
+            apy: parseFloat(anyCompoundPool.apy) || 2.8,
+            tvl: parseFloat(anyCompoundPool.tvlUsd) || 300_000_000,
+            riskLevel: 'Low',
+            token: anyCompoundPool.symbol || 'ETH',
+            gasEstimate: 200000,
+          });
+          console.log("Added Compound Finance yield data from DeFiLlama (non-ETH pool).");
+        } else {
+          // Fallback if no Compound pools found
+          yields.push({
+            protocol: 'Compound',
+            apy: 2.8, // Conservative estimate
+            tvl: 300_000_000, // Approximate TVL
+            riskLevel: 'Low',
+            token: 'ETH',
+            gasEstimate: 200000,
+          });
+          console.log("No Compound pools found in DeFiLlama data, using fallback data.");
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching Compound Finance data from DeFiLlama:', error);
+      // Add fallback data if API fails
+      yields.push({
+        protocol: 'Compound',
+        apy: 2.8,
+        tvl: 300_000_000,
+        riskLevel: 'Low',
+        token: 'ETH',
+        gasEstimate: 200000,
+      });
+      console.log("Using fallback Compound Finance data due to error.");
+    }
 
     if (yields.length === 0) {
       console.error("Failed to fetch any protocol data.");

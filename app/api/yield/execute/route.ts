@@ -19,11 +19,21 @@ const LIDO_ABI = [
 const EIGENLAYER_STRATEGY_MANAGER_ABI = [
      "function depositIntoStrategy(address strategy, address token, uint256 amount)"
 ];
+const CURVE_POOL_ABI = [
+    "function add_liquidity(uint256[2] memory amounts, uint256 min_mint_amount)",
+    "function remove_liquidity(uint256 _amount, uint256[2] memory min_amounts)"
+];
+const COMPOUND_ABI = [
+    "function supply(address asset, uint256 amount)",
+    "function withdraw(address asset, uint256 amount)"
+];
 
 // Placeholder Contract Addresses - Replace with actual mainnet addresses
 const AAVE_POOL_ADDRESS = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2';
 const LIDO_ADDRESS = '0xae7ab96520de3a18e5e111b5eaab095312d7fe84';
 const EIGENLAYER_MANAGER_ADDRESS = '0x858646372CC42E1A627fcE94aa7A7033e7CF075A';
+const CURVE_ETH_STETH_POOL_ADDRESS = '0xdc24316b9ae028f1497c275eb9192a3ea0f67022';
+const COMPOUND_COMET_ADDRESS = '0xA17581A9E3356d9A858b789D68B4d866e593aE94';
 
 // Request validation schema
 const executeRequestSchema = z.object({
@@ -115,6 +125,58 @@ async function simulateRebalance(
     try {
         // Simulate network delay for testing
         await new Promise(res => setTimeout(res, 1500));
+
+        // In a real implementation, we would execute different logic based on the protocol
+        // This is a placeholder for future implementation
+        if (userAddress) {
+            console.log(`[USER: ${userId}] Would execute transaction for address: ${userAddress}`);
+            
+            // Example of how real transaction execution would be implemented:
+            /*
+            const provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_RPC_URL);
+            const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+            
+            let tx;
+            switch (newStrategy.protocol) {
+                case 'Aave':
+                    const aavePool = new ethers.Contract(AAVE_POOL_ADDRESS, AAVE_POOL_ABI, signer);
+                    // Example: Supply ETH to Aave
+                    tx = await aavePool.supply(WETH_ADDRESS, ethers.parseEther("0.1"), userAddress, 0);
+                    break;
+                case 'Lido':
+                    const lido = new ethers.Contract(LIDO_ADDRESS, LIDO_ABI, signer);
+                    // Example: Stake ETH in Lido
+                    tx = await lido.submit(ethers.ZeroAddress, { value: ethers.parseEther("0.1") });
+                    break;
+                case 'EigenLayer':
+                    const eigenManager = new ethers.Contract(EIGENLAYER_MANAGER_ADDRESS, EIGENLAYER_STRATEGY_MANAGER_ABI, signer);
+                    // Example: Deposit into EigenLayer strategy
+                    tx = await eigenManager.depositIntoStrategy(STRATEGY_ADDRESS, WETH_ADDRESS, ethers.parseEther("0.1"));
+                    break;
+                case 'Curve Finance':
+                    const curvePool = new ethers.Contract(CURVE_ETH_STETH_POOL_ADDRESS, CURVE_POOL_ABI, signer);
+                    // Example: Add liquidity to Curve ETH/stETH pool
+                    // [ETH amount, stETH amount]
+                    const amounts = [ethers.parseEther("0.1"), 0];
+                    tx = await curvePool.add_liquidity(amounts, 0, { value: ethers.parseEther("0.1") });
+                    break;
+                case 'Compound':
+                    const compound = new ethers.Contract(COMPOUND_COMET_ADDRESS, COMPOUND_ABI, signer);
+                    // Example: Supply ETH to Compound
+                    tx = await compound.supply(WETH_ADDRESS, ethers.parseEther("0.1"));
+                    break;
+                default:
+                    throw new Error(`Unsupported protocol: ${newStrategy.protocol}`);
+            }
+            
+            await tx.wait();
+            return {
+                success: true,
+                message: `Successfully executed rebalance to ${newStrategy.protocol}.`,
+                txHash: tx.hash
+            };
+            */
+        }
 
         // Update database state AFTER successful simulation/execution
         await prisma.userStrategy.upsert({
