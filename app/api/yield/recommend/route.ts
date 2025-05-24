@@ -8,8 +8,8 @@ import { getPrivyUser, getPrimaryWalletAddress } from '@/lib/auth';
 import { tools, AppTools } from '@/core/ai/tools';
 
 
-export const runtime = 'edge';
-export const preferredRegion = ['iad1'];
+// export const runtime = 'edge';
+// export const preferredRegion = ['iad1'];
 
 const recommendRequestSchema = z.object({
   riskLevel: z.number().min(1).max(5),
