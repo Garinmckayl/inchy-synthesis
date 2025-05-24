@@ -5,10 +5,8 @@ import { generateObject } from 'ai';
 import { google } from '@ai-sdk/google';
 import { fetchProtocolYields, calculateNetApy, getEthPrice, ProtocolYield } from '@/core/defi/protocols';
 import { getPrivyUser, getPrimaryWalletAddress } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
 import { tools, AppTools } from '@/core/ai/tools';
 
-const prisma = new PrismaClient();
 
 export const runtime = 'edge';
 export const preferredRegion = ['iad1'];
